@@ -1,3 +1,4 @@
+#include "krasnoludki.h"
 #include <iostream>
 
 
