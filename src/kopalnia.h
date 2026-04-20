@@ -2,6 +2,22 @@
 #ifndef KOPALNIA_H
 #define KOPALNIA_H
 
+#include<string>
 
+using namespace std;
+
+struct Wspolrzedne{
+    int x;
+    int y;
+};
+
+class Kopalnia
+{
+    int ID;
+    Wspolrzedne wspolrzedne;
+    string surowiec;
+    int iloscMiejsc;
+
+};
 
 #endif
