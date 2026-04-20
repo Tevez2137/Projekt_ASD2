@@ -13,10 +13,13 @@ struct Wspolrzedne{
 
 class Kopalnia
 {
+public:
     int ID;
     Wspolrzedne wspolrzedne;
     string surowiec;
     int iloscMiejsc;
+
+    Kopalnia(int ID, Wspolrzedne wspolrzedne, string surowiec, int iloscMiejsc);
 
 };
 

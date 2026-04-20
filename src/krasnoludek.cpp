@@ -1,6 +1,5 @@
 #include "krasnoludek.h"
 #include <iostream>
-#include <fstream>
 
 using namespace std;
 
