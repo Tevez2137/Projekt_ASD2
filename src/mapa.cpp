@@ -2,7 +2,6 @@
 #include <iostream>
 #include <queue>
 #include <algorithm>
-#include <fstream>
 
 using namespace std;
 
@@ -10,18 +9,6 @@ const int INF = 1e9;
 
 Graph::Graph(int v) : vertices(v) {
     adj.resize(vertices);
-    ifstream dane("../dane/mapa.csv");
-    if (dane.is_open()) {
-        // Odczyt danych z pliku CSV
-        // Przykład formatu: u,v,cap,cost
-        int u, v, cap, cost;
-        while (dane >> u >> v >> cap >> cost) {
-            addEdge(u, v, cap, cost);
-        }
-        dane.close();
-    } else {
-        cerr << "Nie można otworzyć pliku mapa.csv" << endl;
-    }
 }
 
 void Graph::addEdge(int u, int v, int cap, int cost) {
