@@ -2,10 +2,102 @@
 #include <iostream>
 #include <queue>
 #include <algorithm>
+#include "krasnoludek.h"
+#include "kopalnia.h"
+#include <fstream>
+#include <string>
+#include <sstream>
 
 using namespace std;
 
 const int INF = 1e9;
+
+
+void init(){
+
+    vector<Kopalnia> kopalnie;
+    vector<Krasnoludek> krasnoludki;
+
+    ifstream plikKopalnie("kopalnie.csv");
+    if(plikKopalnie.is_open()){
+        string linia;
+        while(getline(plikKopalnie,linia)){
+          if (linia.empty()) continue;
+
+            stringstream ss(linia);
+            string temp;
+            
+            int ID, ID_kopalni;
+            vector<string> mineraly;
+            Domek domek;
+
+            getline(ss, temp, ','); ID = stoi(temp);
+            getline(ss, temp, ','); ID_kopalni = stoi(temp);
+            
+            string wszystkieMineraly;
+            getline(ss, wszystkieMineraly, ',');
+            
+            stringstream ssMineraly(wszystkieMineraly);
+            string m;
+            while (getline(ssMineraly, m, ';')) {
+                mineraly.push_back(m);
+            }
+
+            getline(ss, temp, ','); domek.x = stoi(temp);
+            getline(ss, temp, ','); domek.y = stoi(temp);
+
+            krasnoludki.push_back(Krasnoludek(ID, ID_kopalni, mineraly, domek));
+
+            //kopalnie.push_back(Kopalnia(ID, wspolrzedne, surowiec, iloscMiejsc));
+        }
+        plikKopalnie.close();
+    }else
+    {
+        cout<<"Nie można otworzyć pliku kopalnie.txt"<<endl;
+    }   
+    ifstream plikKrasnoludki("krasnoludki.csv");
+    if(plikKrasnoludki.is_open()){  
+        string linia;
+        while(getline(plikKrasnoludki,linia)){
+        int ID;
+          int ID_kopalni;
+          vector<string> mineraly;
+          Domek domek;
+          stringstream ss(linia);
+          string temp;  
+            getline(ss,temp,',');
+            ID = stoi(temp);
+            getline(ss,temp,',');
+            ID_kopalni = stoi(temp);
+            getline(ss,temp,',');
+            // 3. Czytamy Minerały (jako jeden string, np. "Rubiny;Zloto")
+            string wszystkieMineraly;
+            getline(ss, wszystkieMineraly, ',');
+    
+            // Rozbijamy minerały po średniku
+            stringstream ssMineraly(wszystkieMineraly);
+            string pojedynczyMineral;
+            while (getline(ssMineraly, pojedynczyMineral, ';')) {
+                    mineraly.push_back(pojedynczyMineral);
+                }
+
+            getline(ss, temp, ',');
+            domek.x = std::stoi(temp);
+
+            getline(ss, temp, ',');
+            domek.y = stoi(temp);    
+
+          krasnoludki.push_back(Krasnoludek(ID,ID_kopalni,mineraly,domek));
+
+        }
+        plikKrasnoludki.close();
+    }else
+    {
+        cout<<"Nie można otworzyć pliku krasnoludki.txt"<<endl;
+    }
+}
+
+
 
 Graph::Graph(int v) : vertices(v) {
     adj.resize(vertices);

@@ -26,6 +26,7 @@ public:
     Graph(int v);
     void addEdge(int u, int v, int cap, int cost);
     void minCostMaxFlow(int start, int end);
+    void init();
 };
 
 #endif
