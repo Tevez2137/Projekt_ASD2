@@ -13,12 +13,12 @@ using namespace std;
 const int INF = 1e9;
 
 
-void init(){
+void Graph::init(){
 
     vector<Kopalnia> kopalnie;
     vector<Krasnoludek> krasnoludki;
 
-    ifstream plikKopalnie("kopalnie.csv");
+    ifstream plikKopalnie("../data/kopalnie.csv");
     if(plikKopalnie.is_open()){
         string linia;
         while(getline(plikKopalnie,linia)){
@@ -53,9 +53,9 @@ void init(){
         plikKopalnie.close();
     }else
     {
-        cout<<"Nie można otworzyć pliku kopalnie.txt"<<endl;
+        cout<<"Nie można otworzyć pliku kopalnie.csv"<<endl;
     }   
-    ifstream plikKrasnoludki("krasnoludki.csv");
+    ifstream plikKrasnoludki("../data/dane_krasnoludkow.csv");
     if(plikKrasnoludki.is_open()){  
         string linia;
         while(getline(plikKrasnoludki,linia)){
@@ -167,7 +167,7 @@ bool Graph::spfa(int start, int end, vector<int>& dist, vector<int>& parent, vec
         q.pop();
         inQueue[u] = false;
 
-        for (int i = 0; i < adj[u].size(); i++) {
+        for (int i = 0; i < (int)adj[u].size(); i++) {
             Edge& e = adj[u][i];
             if (e.capacity - e.flow > 0 && dist[u] + e.cost < dist[e.to]) {
                 dist[e.to] = dist[u] + e.cost;

@@ -23,10 +23,11 @@ private:
     bool spfa(int start, int end, std::vector<int>& dist, std::vector<int>& parent, std::vector<int>& parentEdge, std::vector<bool>& inQueue);
 
 public:
+    void init();
     Graph(int v);
     void addEdge(int u, int v, int cap, int cost);
     void minCostMaxFlow(int start, int end);
-    void init();
+    
 };
 
 #endif
