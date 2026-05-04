@@ -1,12 +1,13 @@
-//co potrzebuje kopalnia: gdzie jest , co przyjmuje , jaki surowiec , ilu pracownikow 
+// co potrzebuje kopalnia: gdzie jest , co przyjmuje , jaki surowiec , ilu pracownikow
 #ifndef KOPALNIA_H
 #define KOPALNIA_H
 
-#include<string>
+#include <string>
 
 using namespace std;
 
-struct Wspolrzedne{
+struct Wspolrzedne
+{
     int x;
     int y;
 };
@@ -14,13 +15,12 @@ struct Wspolrzedne{
 class Kopalnia
 {
 public:
-    int ID;
+    string ID;
     Wspolrzedne wspolrzedne;
     string surowiec;
     int iloscMiejsc;
 
-    Kopalnia(int ID, Wspolrzedne wspolrzedne, string surowiec, int iloscMiejsc);
-
+    Kopalnia(string ID, Wspolrzedne wspolrzedne, string surowiec, int iloscMiejsc);
 };
 
 #endif

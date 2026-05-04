@@ -21,14 +21,14 @@ class Krasnoludek{
     private:
     
     public:
-    int ID;
-    int ID_kopalni;
+    string ID;
+    string ID_kopalni;
     vector<string> mineraly;
     Domek domek;
 
 
 
-    Krasnoludek(int ID,int ID_kopalni,vector<string> mineraly,Domek domek);
+    Krasnoludek(string ID,string ID_kopalni,vector<string> mineraly,Domek domek);
     
 };
 
