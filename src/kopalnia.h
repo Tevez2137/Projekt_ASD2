@@ -9,7 +9,8 @@
 
 using namespace std;
 
-struct Wspolrzedne{
+struct Wspolrzedne
+{
     int x;
     int y;
 };
@@ -18,7 +19,7 @@ struct Wspolrzedne{
 class Kopalnia
 {
 public:
-    int ID;
+    string ID;
     Wspolrzedne wspolrzedne;
     string surowiec;
     int iloscMiejsc;
