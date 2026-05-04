@@ -1,0 +1,13 @@
+# Skompilowane pliki C++ i pliki obiektowe
+*.o
+*.out
+*.exe
+symulacja_krasnoludkow
+
+# Katalogi konfiguracyjne środowisk IDE (JetBrains/CLion/PyCharm)
+.idea/
+cmake-build-debug/
+
+# Pliki systemowe (Mac/Windows)
+.DS_Store
+Thumbs.dbs
