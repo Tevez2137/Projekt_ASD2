@@ -1,33 +1,33 @@
-# Kompilator
+# Kompilator i flagi
 CXX = g++
-
-# Flagi kompilacji (standard C++17 i włączenie pokazywania błędów/ostrzeżeń)
 CXXFLAGS = -std=c++17 -Wall -Wextra
 
-# Nazwa Twojego skompilowanego programu
+# Nazwa programu i nowy folder na pliki skompilowane
 TARGET = symulacja_krasnoludkow
+BUILD_DIR = build
 
-# Lista wszystkich plików źródłowych w Twoim projekcie
+# Pliki źródłowe
 SRCS = main.cpp src/kopalnia.cpp src/krasnoludek.cpp src/mapa.cpp
 
-# Pliki obiektowe (zastąpienie .cpp na .o)
-OBJS = $(SRCS:.cpp=.o)
+# Magia nr 1: Automatycznie zamienia listę "src/plik.cpp" na "build/src/plik.o"
+OBJS = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(SRCS))
 
-# Domyślna reguła - odpala się po wpisaniu samego 'make'
-all: $(TARGET)
+# Domyślna reguła
+all: $(BUILD_DIR)/$(TARGET)
 
-# Tworzenie pliku wykonywalnego
-$(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS)
+# Tworzenie finalnego pliku wykonywalnego w folderze build/
+$(BUILD_DIR)/$(TARGET): $(OBJS)
+	$(CXX) $(CXXFLAGS) -o $@ $(OBJS)
 
-# Kompilacja każdego pliku .cpp do pliku .o
-%.o: %.cpp
+# Kompilacja plików .cpp do .o wewnątrz folderu build/
+$(BUILD_DIR)/%.o: %.cpp
+	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Szybkie kompilowanie i uruchamianie programu
-run: $(TARGET)
-	./$(TARGET)
+# Szybkie budowanie i uruchamianie z nowego folderu
+run: all
+	./$(BUILD_DIR)/$(TARGET)
 
-# Sprzątanie - usuwanie plików tymczasowych i samego programu
+# Sprzątanie - teraz jest banalne, po prostu usuwamy cały folder build!
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -rf $(BUILD_DIR)
