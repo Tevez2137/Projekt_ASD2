@@ -9,8 +9,9 @@
 
 int main()
 {
-    Graph g(1000);
+    Graph g(1);
     g.init();
+    
     
 
 
