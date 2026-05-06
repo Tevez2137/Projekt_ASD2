@@ -2,32 +2,48 @@
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra
 
-# Nazwa programu i nowy folder na pliki skompilowane
-TARGET = symulacja_krasnoludkow
+# Pliki źródłowe
+SRCS = main.cpp src/mapa.cpp src/kopalnia.cpp src/krasnoludek.cpp
 BUILD_DIR = build
 
-# Pliki źródłowe
-SRCS = main.cpp src/kopalnia.cpp src/krasnoludek.cpp src/mapa.cpp
-
-# Magia nr 1: Automatycznie zamienia listę "src/plik.cpp" na "build/src/plik.o"
+# Magia zamiany ścieżek
 OBJS = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(SRCS))
+
+# ==========================================
+# WYKRYWANIE SYSTEMU OPERACYJNEGO
+# ==========================================
+ifeq ($(OS),Windows_NT)
+	# Ustawienia dla Windows (cmd.exe)
+	TARGET = symulacja_krasnoludkow.exe
+	CLEAN_CMD = if exist $(BUILD_DIR) rmdir /S /Q $(BUILD_DIR)
+	# Hack na tworzenie folderów w locie pod CMD:
+	MKDIR_CMD = if not exist "$(dir $@)" mkdir "$(subst /,\,$(dir $@))"
+	RUN_CMD = $(BUILD_DIR)\$(TARGET)
+else
+	# Ustawienia dla Linux / Mac
+	TARGET = symulacja_krasnoludkow
+	CLEAN_CMD = rm -rf $(BUILD_DIR)
+	MKDIR_CMD = mkdir -p $(dir $@)
+	RUN_CMD = ./$(BUILD_DIR)/$(TARGET)
+endif
+# ==========================================
 
 # Domyślna reguła
 all: $(BUILD_DIR)/$(TARGET)
 
-# Tworzenie finalnego pliku wykonywalnego w folderze build/
+# Tworzenie finalnego pliku
 $(BUILD_DIR)/$(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $(OBJS)
 
-# Kompilacja plików .cpp do .o wewnątrz folderu build/
+# Kompilacja plików .cpp do .o w folderze build
 $(BUILD_DIR)/%.o: %.cpp
-	@mkdir -p $(dir $@)
+	@$(MKDIR_CMD)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Szybkie budowanie i uruchamianie z nowego folderu
+# Odpalanie
 run: all
-	./$(BUILD_DIR)/$(TARGET)
+	$(RUN_CMD)
 
-# Sprzątanie - teraz jest banalne, po prostu usuwamy cały folder build!
+# Sprzątanie
 clean:
-	rm -rf $(BUILD_DIR)
+	$(CLEAN_CMD)
