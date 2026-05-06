@@ -5,14 +5,14 @@ from PySide6.QtGui import QPen, QBrush, QColor
 from PySide6.QtCore import Qt
 
 # Importujemy wygenerowany interfejs z Qt Designera
-from ui_interfejs import Ui_MainWindow 
+from ui_interfejs import Ui_mainWindow 
 
 class GlowneOkno(QMainWindow):
     def __init__(self):
         super().__init__()
         
         # 1. Inicjalizacja interfejsu z Designera
-        self.ui = Ui_MainWindow()
+        self.ui = Ui_mainWindow()
         self.ui.setupUi(self)
         
         # Opcjonalnie: ustawienie tytułu okna, jeśli nie ustawiłeś w Designerze
