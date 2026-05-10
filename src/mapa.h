@@ -38,7 +38,7 @@ public:
     Graph(int v);
     void addEdge(int u, int v, int cap, int cost);
     void minCostMaxFlow(int start, int end);
-
+    int findMaxFlow(int s, int t);
     // Funkcje do zarządzania rurociągiem danych
     void init();                                     // Główny silnik (odpala resztę)
     void buildGraph();                               // Buduje krawędzie i filtruje preferencje

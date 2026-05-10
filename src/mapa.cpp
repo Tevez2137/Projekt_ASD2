@@ -8,6 +8,7 @@
 #include <string>
 #include <sstream>
 #include <cmath> // Wymagane dla std::hypot i std::round
+#include <vector>
 
 using namespace std;
 
@@ -99,7 +100,7 @@ void Graph::init() {
     cout << "Budowanie sieci polaczen (z filtrowaniem surowcow)..." << endl;
     this->buildGraph();                 
     
-    cout << "Obliczanie optymalnego przydzialu (MCMF)..." << endl;
+    cout << "Obliczanie optymalnego przydzialu (Cycle Canceling)..." << endl;
     this->minCostMaxFlow(this->zrodlo, this->ujscie); 
     
     cout << "Zapisywanie wynikow dla Pythona..." << endl;
@@ -190,67 +191,115 @@ void Graph::addEdge(int u, int v, int cap, int cost) {
     adj[v].push_back({u, 0, 0, -cost, (int)adj[u].size() - 1});
 }
 
-void Graph::minCostMaxFlow(int start, int end) {
-    int totalFlow = 0;
-    int totalCost = 0;
-    vector<int> dist(vertices);
+// ==========================================================
+// 5. FAZA 1: MAKSYMALNY PRZEPŁYW (Edmonds-Karp)
+// ==========================================================
+int Graph::findMaxFlow(int s, int t) {
+    int flow = 0;
     vector<int> parent(vertices);
-    vector<int> parentEdge(vertices);
-    vector<bool> inQueue(vertices);
+    vector<int> edge_from(vertices);
 
-    while (spfa(start, end, dist, parent, parentEdge, inQueue)) {
-        int pushFlow = INF;
-        int curr = end;
-        while (curr != start) {
-            int p = parent[curr];
-            int e_idx = parentEdge[curr];
-            pushFlow = min(pushFlow, adj[p][e_idx].capacity - adj[p][e_idx].flow);
-            curr = p;
-        }
-        curr = end;
-        while (curr != start) {
-            int p = parent[curr];
-            int e_idx = parentEdge[curr];
-            int rev_idx = adj[p][e_idx].rev_idx;
-            adj[p][e_idx].flow += pushFlow;
-            adj[curr][rev_idx].flow -= pushFlow;
-            curr = p;
-        }
-        totalFlow += pushFlow;
-        totalCost += pushFlow * dist[end];
-    }
-    
-    cout << "-> Przeslano " << totalFlow << " krasnoludkow." << endl;
-    cout << "-> Laczny koszt podrozy (kilometry): " << totalCost << endl;
-}
+    while (true) {
+        fill(parent.begin(), parent.end(), -1);
+        queue<int> q;
+        q.push(s);
+        parent[s] = s;
 
-bool Graph::spfa(int start, int end, vector<int>& dist, vector<int>& parent, vector<int>& parentEdge, vector<bool>& inQueue) {
-    fill(dist.begin(), dist.end(), INF);
-    fill(parent.begin(), parent.end(), -1);
-    fill(inQueue.begin(), inQueue.end(), false);
-
-    queue<int> q;
-    dist[start] = 0;
-    q.push(start);
-    inQueue[start] = true;
-
-    while (!q.empty()) {
-        int u = q.front();
-        q.pop();
-        inQueue[u] = false;
-
-        for (int i = 0; i < (int)adj[u].size(); i++) {
-            Edge& e = adj[u][i];
-            if (e.capacity - e.flow > 0 && dist[u] + e.cost < dist[e.to]) {
-                dist[e.to] = dist[u] + e.cost;
-                parent[e.to] = u;
-                parentEdge[e.to] = i;
-                if (!inQueue[e.to]) {
+        while (!q.empty()) {
+            int u = q.front(); q.pop();
+            for (int i = 0; i < (int)adj[u].size(); i++) {
+                Edge &e = adj[u][i];
+                if (parent[e.to] == -1 && e.capacity > e.flow) {
+                    parent[e.to] = u;
+                    edge_from[e.to] = i;
                     q.push(e.to);
-                    inQueue[e.to] = true;
                 }
             }
         }
+
+        if (parent[t] == -1) break;
+
+        int push = INF;
+        for (int v = t; v != s; v = parent[v]) {
+            int u = parent[v];
+            int idx = edge_from[v];
+            push = min(push, adj[u][idx].capacity - adj[u][idx].flow);
+        }
+
+        for (int v = t; v != s; v = parent[v]) {
+            int u = parent[v];
+            int idx = edge_from[v];
+            int rev_idx = adj[u][idx].rev_idx;
+            adj[u][idx].flow += push;
+            adj[v][rev_idx].flow -= push;
+        }
+        flow += push;
     }
-    return dist[end] != INF;
+    return flow;
+}
+
+// ==========================================================
+// 6. FAZA 2: USUWANIE CYKLI O UJEMNYM KOSZCIE
+// ==========================================================
+void Graph::minCostMaxFlow(int start, int end) {
+    int totalFlow = findMaxFlow(start, end);
+    cout << "-> Faza 1: Znaleziono maksymalny przeplyw: " << totalFlow << " krasnoludkow." << endl;
+
+    while (true) {
+        vector<int> dist(vertices, 0); 
+        vector<int> parent(vertices, -1);
+        vector<int> edge_to_parent(vertices, -1);
+        int node_in_cycle = -1;
+
+        for (int i = 0; i < vertices; i++) {
+            node_in_cycle = -1;
+            for (int u = 0; u < vertices; u++) {
+                for (int j = 0; j < (int)adj[u].size(); j++) {
+                    Edge &e = adj[u][j];
+                    if (e.capacity > e.flow && dist[e.to] > dist[u] + e.cost) {
+                        dist[e.to] = dist[u] + e.cost;
+                        parent[e.to] = u;
+                        edge_to_parent[e.to] = j;
+                        node_in_cycle = e.to;
+                    }
+                }
+            }
+        }
+
+        if (node_in_cycle == -1) break; 
+
+        for (int i = 0; i < vertices; i++) node_in_cycle = parent[node_in_cycle];
+
+        vector<pair<int, int>> cycle;
+        int curr = node_in_cycle;
+        do {
+            int prev = parent[curr];
+            cycle.push_back({prev, edge_to_parent[curr]});
+            curr = prev;
+        } while (curr != node_in_cycle);
+
+        int push = INF;
+        for (auto &p : cycle) {
+            push = min(push, adj[p.first][p.second].capacity - adj[p.first][p.second].flow);
+        }
+
+        for (auto &p : cycle) {
+            int u = p.first;
+            int idx = p.second;
+            int v = adj[u][idx].to;
+            int rev_idx = adj[u][idx].rev_idx;
+            adj[u][idx].flow += push;
+            adj[v][rev_idx].flow -= push;
+        }
+        // cout << "   ...usunieto cykl ujemny (zmniejszono sumaryczny dystans)" << endl;
+    }
+
+    long long totalCost = 0;
+    for (int u = 0; u < vertices; u++) {
+        for (auto &e : adj[u]) {
+            if (e.flow > 0 && e.cost > 0) totalCost += (long long)e.flow * e.cost;
+        }
+    }
+    cout << "-> Faza 2: Optymalizacja zakonczona." << endl;
+    cout << "-> Laczny najmniejszy dystans krasnoludkow: " << totalCost << " km" << endl;
 }
