@@ -102,6 +102,8 @@ void Graph::init() {
     
     cout << "Obliczanie optymalnego przydzialu (Cycle Canceling)..." << endl;
     this->minCostMaxFlow(this->zrodlo, this->ujscie); 
+
+    this->obliczTraseKsiecia();
     
     cout << "Zapisywanie wynikow dla Pythona..." << endl;
     this->saveResults("data/przydzialy.txt"); 
@@ -308,4 +310,87 @@ void Graph::minCostMaxFlow(int start, int end) {
     }
     cout << "-> Faza 2: Optymalizacja zakonczona." << endl;
     cout << "-> Laczny najmniejszy dystans krasnoludkow: " << totalCost << " km" << endl;
+}
+
+// ==========================================================
+// 7. Budowanie otoczki wypukłej (dla wizualizacji trasy Księcia)
+// ==========================================================
+
+// Pomocnicza: liczy czy skrecamy w lewo (>0), w prawo (<0) czy idziemy prosto (0)
+long long skret(Wspolrzedne a, Wspolrzedne b, Wspolrzedne c) {
+    long long dx1 = b.x - a.x;
+    long long dy1 = b.y - a.y;
+    long long dx2 = c.x - a.x;
+    long long dy2 = c.y - a.y;
+    return (dx1 * dy2) - (dy1 * dx2);
+}
+
+// Pomocnicza: dystans miedzy punktami do sortowania
+long long dystansDoKwadratu(Wspolrzedne p1, Wspolrzedne p2) {
+    long long dx = p1.x - p2.x;
+    long long dy = p1.y - p2.y;
+    return (dx * dx) + (dy * dy);
+}
+
+void Graph::obliczTraseKsiecia() {
+    vector<Wspolrzedne> punkty;
+    int N = krasnoludki.size();
+
+    // 1. Wybieramy tylko kopalnie, ktore faktycznie pracuja (maja flow do ujscia)
+    for (int j = 0; j < kopalnie.size(); j++) {
+        int u = N + j + 1; 
+        bool uzywana = false;
+        for (auto &e : adj[u]) {
+            if (e.to == ujscie && e.flow > 0) {
+                uzywana = true; 
+                break;
+            }
+        }
+        if (uzywana) punkty.push_back(kopalnie[j].wspolrzedne);
+    }
+
+    if (punkty.size() < 2) {
+        cout << "Problem 2: Trasa patrolowa: 0 km (za malo kopalni)\n";
+        return;
+    }
+
+    // 2. Szukamy punktu startowego (najniższy Y)
+    int start = 0;
+    for (int i = 1; i < (int)punkty.size(); i++) {
+        if (punkty[i].y < punkty[start].y || (punkty[i].y == punkty[start].y && punkty[i].x < punkty[start].x))
+            start = i;
+    }
+    swap(punkty[0], punkty[start]);
+    Wspolrzedne p0 = punkty[0];
+
+    // 3. Sortujemy reszte kopalni katowo wzgledem p0 (uzywamy lambdy [&])
+    sort(punkty.begin() + 1, punkty.end(), [&](Wspolrzedne a, Wspolrzedne b) {
+        long long s = skret(p0, a, b);
+        if (s == 0) return dystansDoKwadratu(p0, a) < dystansDoKwadratu(p0, b);
+        return s > 0;
+    });
+
+    // 4. Budujemy otoczke (Ksiece skreca tylko w lewo!)
+    vector<Wspolrzedne> otoczka;
+    for (int i = 0; i < (int)punkty.size(); i++) {
+        while (otoczka.size() >= 2 && skret(otoczka[otoczka.size()-2], otoczka.back(), punkty[i]) <= 0) {
+            otoczka.pop_back();
+        }
+        otoczka.push_back(punkty[i]);
+    }
+
+    // 5. Liczymy dystans (obwod gumki recepturki)
+    double dystans = 0;
+    for (int i = 0; i < (int)otoczka.size(); i++) {
+        Wspolrzedne a = otoczka[i];
+        Wspolrzedne b = otoczka[(i + 1) % otoczka.size()];
+        dystans += hypot(a.x - b.x, a.y - b.y);
+    }
+
+    // Jesli tylko 2 kopalnie, trasa w obie strony
+    if (otoczka.size() == 2) dystans *= 2;
+
+    cout << "---------------------------------------------------\n";
+    cout << "PROBLEM 2: Trasa patrolowa Ksiecia: " << round(dystans) << " km\n";
+    cout << "---------------------------------------------------\n";
 }
