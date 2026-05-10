@@ -239,16 +239,23 @@ int Graph::findMaxFlow(int s, int t) {
 }
 
 // ==========================================================
-// 6. FAZA 2: USUWANIE CYKLI O UJEMNYM KOSZCIE
+// 6. FAZA 2: USUWANIE CYKLI O UJEMNYM KOSZCIE (Zoptymalizowane)
 // ==========================================================
 void Graph::minCostMaxFlow(int start, int end) {
     int totalFlow = findMaxFlow(start, end);
     cout << "-> Faza 1: Znaleziono maksymalny przeplyw: " << totalFlow << " krasnoludkow." << endl;
 
+    // OPTYMALIZACJA PAMIĘCI: Deklarujemy wektory TYLKO RAZ poza pętlą
+    vector<int> dist(vertices); 
+    vector<int> parent(vertices);
+    vector<int> edge_to_parent(vertices);
+
     while (true) {
-        vector<int> dist(vertices, 0); 
-        vector<int> parent(vertices, -1);
-        vector<int> edge_to_parent(vertices, -1);
+        // Zamiast tworzyć na nowo, po prostu je "zerujemy"
+        fill(dist.begin(), dist.end(), 0);
+        fill(parent.begin(), parent.end(), -1);
+        fill(edge_to_parent.begin(), edge_to_parent.end(), -1);
+        
         int node_in_cycle = -1;
 
         for (int i = 0; i < vertices; i++) {
@@ -291,7 +298,6 @@ void Graph::minCostMaxFlow(int start, int end) {
             adj[u][idx].flow += push;
             adj[v][rev_idx].flow -= push;
         }
-        // cout << "   ...usunieto cykl ujemny (zmniejszono sumaryczny dystans)" << endl;
     }
 
     long long totalCost = 0;
