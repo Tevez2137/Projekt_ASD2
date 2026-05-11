@@ -44,7 +44,6 @@ public:
     void buildGraph();                               // Buduje krawędzie i filtruje preferencje
     void saveResults(const std::string& filename);   // Zapisuje wyniki do pliku txt
     
-    void obliczTraseKsiecia();
 };
 
 #endif
