@@ -24,10 +24,6 @@ public:
     int iloscMiejsc;
 
     Kopalnia(string ID, Wspolrzedne wspolrzedne, string surowiec, int iloscMiejsc);
-    int odleglosc(Wspolrzedne p1, Wspolrzedne p2);
-    bool porownaj(Wspolrzedne p1, Wspolrzedne p2);
-    vector<Wspolrzedne> algorytmGrahama(vector<Wspolrzedne> punkty);
-    int iloczynKwadratowy(Wspolrzedne p1, Wspolrzedne p2, Wspolrzedne p3);
 };
 
 #endif
