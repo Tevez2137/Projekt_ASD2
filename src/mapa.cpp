@@ -21,7 +21,7 @@ const int INF = 1e9;
 void Graph::init()
 {
     // A) Odczyt kopalni
-    ifstream plikKopalnie("data/kopalnie.csv");
+    ifstream plikKopalnie("data/kopalnie_test.csv");
     if (plikKopalnie.is_open())
     {
         string linia;
@@ -54,11 +54,11 @@ void Graph::init()
     }
     else
     {
-        cout << "Nie mozna otworzyc pliku data/kopalnie.csv!" << endl;
+        cout << "Nie mozna otworzyc pliku data/kopalnie_test.csv!" << endl;
     }
 
     // B) Odczyt krasnoludków
-    ifstream plikKrasnoludki("data/dane_krasnoludkow.csv");
+    ifstream plikKrasnoludki("data/dane_krasnoludkow_test.csv");
     if (plikKrasnoludki.is_open())
     {
         string linia;
@@ -102,7 +102,7 @@ void Graph::init()
     }
     else
     {
-        cout << "Nie mozna otworzyc pliku data/dane_krasnoludkow.csv!" << endl;
+        cout << "Nie mozna otworzyc pliku data/dane_krasnoludkow_test.csv!" << endl;
     }
 
     // C) Ustawiamy rozmiar grafu po wczytaniu danych

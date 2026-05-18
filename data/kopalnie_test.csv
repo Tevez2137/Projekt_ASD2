@@ -1,6 +1,4 @@
 ID,X,Y,Surowiec,IloscMiejsc
-1,125,452,Zloto,5
-2,781,114,Zelazo,12
-3,340,555,Srebro,8
-4,902,231,Miedz,15
-5,55,888,Wegiel,20
+1,100,100,Zloto,5
+2,800,100,Wegiel,5
+3,450,800,Srebro,5

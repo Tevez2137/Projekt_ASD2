@@ -79,8 +79,8 @@ class GlowneOkno(QMainWindow):
 
     def wczytaj_i_rysuj(self):
         base_dir = os.path.dirname(__file__)
-        path_kopalnie = os.path.join(base_dir, "..", "data", "kopalnie.csv")
-        path_krasnoludki = os.path.join(base_dir, "..", "data", "dane_krasnoludkow.csv")
+        path_kopalnie = os.path.join(base_dir, "..", "data", "kopalnie_test.csv")
+        path_krasnoludki = os.path.join(base_dir, "..", "data", "dane_krasnoludkow_test.csv")
         path_przydzialy = os.path.join(base_dir, "..", "data", "przydzialy.txt")
         path_otoczka = os.path.join(base_dir, "..", "data", "otoczka.txt") # <--- DODAJ TO
 
