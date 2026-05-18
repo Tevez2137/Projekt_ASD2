@@ -82,6 +82,7 @@ class GlowneOkno(QMainWindow):
         path_kopalnie = os.path.join(base_dir, "..", "data", "kopalnie.csv")
         path_krasnoludki = os.path.join(base_dir, "..", "data", "dane_krasnoludkow.csv")
         path_przydzialy = os.path.join(base_dir, "..", "data", "przydzialy.txt")
+        path_otoczka = os.path.join(base_dir, "..", "data", "otoczka.txt") # <--- DODAJ TO
 
         kopalnie = {}     # Słownik: ID -> {"x": x, "y": y, "surowiec": s, "miejsca": m}
         krasnoludki = {}  # Słownik: ID -> {"x": x, "y": y, "mineraly": m, "id_kop": id}
@@ -129,6 +130,34 @@ class GlowneOkno(QMainWindow):
                             self.scene.addLine(kx, ky, mx, my, QPen(QColor(46, 204, 113), 2))
         except FileNotFoundError:
             print("BRAK PLIKU przydzialy.txt! Kliknij przycisk 'Uruchom Algorytm MCMF'.")
+
+        # ... (tutaj kończy się blok except FileNotFoundError dla przydzialy.txt) ...
+
+        # RYSOWANIE TRASY PATROLOWEJ KSIĘCIA (Otoczka Wypukła)
+        try:
+            punkty_otoczki = []
+            with open(path_otoczka, 'r') as f:
+                for linia in f:
+                    dane = linia.strip().split()
+                    if len(dane) == 2:
+                        punkty_otoczki.append((int(dane[0]), int(dane[1])))
+
+            if len(punkty_otoczki) > 1:
+                # Ustawiamy styl pędzla: kolor fioletowy, grubość 3, linia przerywana
+                pen_otoczka = QPen(QColor(155, 89, 182), 3) 
+                pen_otoczka.setStyle(Qt.DashLine)
+                
+                # Rysujemy linie pomiędzy kolejnymi punktami
+                for i in range(len(punkty_otoczki)):
+                    p1 = punkty_otoczki[i]
+                    p2 = punkty_otoczki[(i + 1) % len(punkty_otoczki)] # Modulo zamyka trasę (ostatni łączy się z pierwszym)
+                    self.scene.addLine(p1[0], p1[1], p2[0], p2[1], pen_otoczka)
+                    
+        except FileNotFoundError:
+            print("BRAK PLIKU otoczka.txt! Zostanie wygenerowany po uruchomieniu algorytmu.")
+
+        # RYSOWANIE OBIEKTÓW NA WIERZCHU (żeby linie ich nie zasłaniały)
+        # ... (tutaj zaczyna się pętla for m_id, data in kopalnie.items():) ...    
 
         for m_id, data in kopalnie.items():
             rect = self.scene.addRect(data["x"] - 10, data["y"] - 10, 20, 20, QPen(Qt.black), QBrush(QColor(231, 76, 60)))

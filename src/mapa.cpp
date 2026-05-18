@@ -407,4 +407,15 @@ void Graph::obliczTraseKsiecia()
     cout << "---------------------------------------------------\n";
     cout << "PROBLEM 2: Trasa patrolowa Ksiecia: " << round(dystans) << " km\n";
     cout << "---------------------------------------------------\n";
+
+    // --- NOWY KOD: Zapisywanie otoczki dla Pythona ---
+    std::ofstream plikOtoczka("data/otoczka.txt");
+    if (plikOtoczka.is_open()) {
+        for (const auto& p : otoczka) {
+            plikOtoczka << p.x << " " << p.y << "\n";
+        }
+        plikOtoczka.close();
+    } else {
+        std::cout << "Blad: Nie udalo sie utworzyc pliku otoczka.txt!\n";
+    }
 }
