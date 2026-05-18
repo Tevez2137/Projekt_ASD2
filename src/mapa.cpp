@@ -21,7 +21,7 @@ const int INF = 1e9;
 void Graph::init()
 {
     // A) Odczyt kopalni
-    ifstream plikKopalnie("data/kopalnie_test.csv");
+    ifstream plikKopalnie("data/kopalnie.csv");
     if (plikKopalnie.is_open())
     {
         string linia;
@@ -54,11 +54,11 @@ void Graph::init()
     }
     else
     {
-        cout << "Nie mozna otworzyc pliku data/kopalnie_test.csv!" << endl;
+        cout << "Nie mozna otworzyc pliku data/kopalnie.csv!" << endl;
     }
 
     // B) Odczyt krasnoludków
-    ifstream plikKrasnoludki("data/dane_krasnoludkow_test.csv");
+    ifstream plikKrasnoludki("data/dane_krasnoludkow.csv");
     if (plikKrasnoludki.is_open())
     {
         string linia;
@@ -102,7 +102,7 @@ void Graph::init()
     }
     else
     {
-        cout << "Nie mozna otworzyc pliku data/dane_krasnoludkow_test.csv!" << endl;
+        cout << "Nie mozna otworzyc pliku data/dane_krasnoludkow.csv!" << endl;
     }
 
     // C) Ustawiamy rozmiar grafu po wczytaniu danych
@@ -410,12 +410,16 @@ void Graph::obliczTraseKsiecia()
 
     // --- NOWY KOD: Zapisywanie otoczki dla Pythona ---
     std::ofstream plikOtoczka("data/otoczka.txt");
-    if (plikOtoczka.is_open()) {
-        for (const auto& p : otoczka) {
+    if (plikOtoczka.is_open())
+    {
+        for (const auto &p : otoczka)
+        {
             plikOtoczka << p.x << " " << p.y << "\n";
         }
         plikOtoczka.close();
-    } else {
+    }
+    else
+    {
         std::cout << "Blad: Nie udalo sie utworzyc pliku otoczka.txt!\n";
     }
 }
