@@ -57,10 +57,40 @@ Niech $K$ oznacza liczbę *aktywnych* kopalni ($K \le M$).
 
 ---
 
-## 3. Moduły w trakcie implementacji
-* **Problem 3 (Salwa Dekametrowców):** *[Implementacja planowana z użyciem Drzewa Przedziałowego]*
+## 3. Problem 3: Salwa Dekametrowców (Obrona Przeciwlotnicza)
+
+### 3.1 Sformalizowanie problemu
+Problem polega na błyskawicznym wyłonieniu dowódcy obrony (dekametrowca o największej "głośności") na konkretnym, zaatakowanym odcinku granicy. Granicę państwa reprezentuje zbiór $N$ dekametrowców rozstawionych wzdłuż otoczki wypukłej wyznaczonej w Problemie 2. System musi sprawnie odpowiadać na zapytania o maksimum w zadanym przedziale indeksów $[L, R]$. Ponieważ granica jest krzywą zamkniętą (pętlą), ataki mogą "przechodzić" przez punkt zszycia tablicy, co oznacza, że indeks początkowy może być matematycznie większy od końcowego ($L > R$).
+
+### 3.2 Wykorzystane struktury danych
+Dla uzyskania logarytmicznego czasu odpowiedzi wykorzystano strukturę **Drzewa Przedziałowego (Segment Tree)** zaimplementowaną na tablicy.
+* **Reprezentacja drzewa:** Wektor `std::vector<WezelDrzewa> tree` o rozmiarze $4N$, gdzie każdy węzeł przechowuje strukturę z polami `maxGlosnosc` oraz `krasnoludekID`.
+* **Element neutralny:** Do obsługi pustych wywołań w liściach zdefiniowano stałą `MINUS_NIESKONCZONOSC` równą $-1$. Gwarantuje to, że zapytania wychodzące poza zakres nie zaburzają wyników funkcji `max()`.
+* **Dane wejściowe:** Wektor bazowy `std::vector<Dekametrowiec> A`, generowany dynamicznie na podstawie współrzędnych geograficznych otoczki wypukłej.
+
+### 3.3 Opis algorytmu (Range Maximum Query - RMQ)
+Działanie modułu opiera się na klasycznym rozwiązaniu problemu RMQ:
+1. **Budowa drzewa (Funkcja `BUILD`):** Konstrukcja przebiega w sposób rekurencyjny (Top-Down). Przestrzeń tablicy dzielona jest na połowy aż do osiągnięcia liści, do których wpisywane są początkowe głośności dekametrowców. Przy powrocie z rekurencji, wartość węzła wewnętrznego jest wyznaczana jako maksimum z jego dwojga dzieci (`tree[v] = max(tree[2v], tree[2v+1])`).
+2. **Przeszukiwanie (Funkcja `QUERY`):** Aby znaleźć maksimum na przedziale $[L, R]$, drzewo jest przeszukiwane rekurencyjnie. 
+   * Jeśli rozpatrywany węzeł jest całkowicie rozłączny z zadanym zapytaniem, algorytm natychmiast zwraca element neutralny.
+   * Jeśli węzeł w całości zawiera się w przedziale zapytania, zwracana jest jego wartość (bez dalszego schodzenia w dół, co gwarantuje wysoką wydajność).
+   * W przypadku częściowego pokrycia, przedział jest dzielony i wynik jest maksimum z lewego i prawego poddrzewa.
+3. **Zapytania cykliczne (Atak dookoła granicy):** Zaimplementowano specjalną logikę odpytywania. Jeżeli $L \le R$, wykonywane jest jedno standardowe zapytanie. Jeżeli $L > R$, zapytanie rozbijane jest na dwa niezależne wywołania: na przedział od $L$ do końca tablicy ($N-1$) oraz od początku tablicy ($0$) do $R$. Ostatecznym dowódcą zostaje krasnoludek wyłoniony z porównania maksimów tych dwóch zapytań.
+
+### 3.4 Analiza poprawności
+Poprawność drzewa przedziałowego opiera się na własności łączności funkcji statystycznej – funkcja wyznaczania maksimum jest w pełni łączna, tj. $\max(a, b, c) = \max(\max(a, b), c)$. Rozbicie przedziału na potęgi dwójki w wewnętrznych węzłach drzewa pozwala na bezbłędną agregację danych. Logika rozbijania zapytań cyklicznych również jest matematycznie i logicznie poprawna, opierając się na tożsamości $\max(A \cup B) = \max(\max(A), \max(B))$, co idealnie modeluje domkniętą granicę Otoczki Wypukłej.
+
+### 3.5 Złożoność
+Niech $N$ oznacza liczbę dekametrowców na granicy (liczbę punktów na otoczce wypukłej).
+* **Złożoność pamięciowa:** $\mathcal{O}(N)$ – reprezentacja tablicowa pełnego drzewa binarnego wymaga alokacji tablicy o wielkości najwyżej $4N$, co jest optymalne pod względem narzutu pamięciowego.
+* **Złożoność czasowa budowy:** $\mathcal{O}(N)$ – każdy z około $2N$ węzłów drzewa jest odwiedzany dokładnie raz podczas inicjalizacji.
+* **Złożoność czasowa zapytania:** $\mathcal{O}(\log N)$ – dzięki agregacji danych w węzłach, maksymalna liczba odwiedzonych wierzchołków na każdym poziomie drzewa podczas działania funkcji `QUERY` wynosi $4$. W przypadku zapytania rozbitego (cyklicznego) wykonywane są dwa takie zapytania, co asymptotycznie utrzymuje czas wyszukiwania w doskonałej złożoności logarytmicznej $2 \times \mathcal{O}(\log N) = \mathcal{O}(\log N)$.
+
+---
+
+## 4. Moduły w trakcie implementacji
 * **Problem 4 (Elektroniczne Księgi):** *[Implementacja planowana z użyciem algorytmów kompresji i wyszukiwania wzorców]*
 
 ---
 
-## 4. Metodologia Testowania
+## 5. Metodologia Testowania
