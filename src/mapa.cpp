@@ -129,7 +129,7 @@ void Graph::init()
     this->obliczSalwe();
 
     cout << "Zapisywanie wynikow dla Pythona..." << endl;
-    this->saveResults("data/przydzialy.txt");
+    this->saveResults("data/dane_krasnoludkow.csv");
 }
 
 // ==========================================
@@ -182,36 +182,46 @@ void Graph::buildGraph()
 // ==========================================
 // 3. GENEROWANIE WYNIKÓW DLA GUI
 // ==========================================
-void Graph::saveResults(const std::string &filename)
-{
-    std::ofstream plik(filename);
-    if (!plik.is_open())
-    {
-        cout << "Blad przy tworzeniu pliku: " << filename << endl;
-        return;
-    }
-
+void Graph::saveResults(const std::string& filename) {
     int N = this->krasnoludki.size();
 
-    // Szukamy przepływu po krasnoludkach (wierzchołki od 1 do N)
-    for (int u = 1; u <= N; u++)
-    {
-        for (const auto &e : adj[u])
-        {
-            // Jeśli poszedł flow i krawędź nie wraca do źródła
-            if (e.flow > 0 && e.to != this->zrodlo)
-            {
+    // 1. Zresetuj obecne przydziały (na wypadek utraty miejsca w kopalni po re-kalkulacji)
+    for (int i = 0; i < N; ++i) {
+        this->krasnoludki[i].ID_kopalni = "0"; 
+    }
 
-                // Odkodowujemy indeks kopalni
+    // 2. Odczytaj nowe przydziały z wyliczonego przepływu i zaktualizuj obiekty
+    for (int u = 1; u <= N; u++) {
+        for (const auto& e : adj[u]) {
+            if (e.flow > 0 && e.to != this->zrodlo) {
                 int kopalnia_idx = e.to - N - 1;
-
-                // Zapisujemy: ID_Krasnoludka ID_Kopalni
-                plik << this->krasnoludki[u - 1].ID << " " << this->kopalnie[kopalnia_idx].ID << "\n";
+                this->krasnoludki[u - 1].ID_kopalni = this->kopalnie[kopalnia_idx].ID;
             }
         }
     }
+
+    // 3. Nadpisz główny plik CSV zaktualizowanymi danymi
+    std::ofstream plik(filename);
+    if (!plik.is_open()) {
+        cout << "Blad przy nadpisywaniu pliku: " << filename << endl;
+        return;
+    }
+
+    plik << "ID,ID_kopalni,Mineraly,X,Y\n";
+    for (int i = 0; i < N; ++i) {
+        plik << this->krasnoludki[i].ID << ","
+             << this->krasnoludki[i].ID_kopalni << ",";
+        
+        // Złączenie minerałów średnikiem z powrotem do formatu CSV
+        for (size_t j = 0; j < this->krasnoludki[i].mineraly.size(); ++j) {
+            plik << this->krasnoludki[i].mineraly[j];
+            if (j < this->krasnoludki[i].mineraly.size() - 1) plik << ";";
+        }
+        
+        plik << "," << this->krasnoludki[i].domek.x << "," << this->krasnoludki[i].domek.y << "\n";
+    }
     plik.close();
-    cout << "Gotowe! Zapisano wyniki do: " << filename << endl;
+    cout << "Gotowe! Zaktualizowano baze krasnoludkow w: " << filename << endl;
 }
 
 // ==========================================
