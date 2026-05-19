@@ -96,6 +96,12 @@ class GlowneOkno(QMainWindow):
         self.ui.pushButton_2.clicked.connect(self.obsluga_ataku_salwa)
         # ------------------------
 
+        # Czyścimy stary wynik ataku (jeśli został z poprzedniego uruchomienia aplikacji)
+        path_salwa = os.path.join(os.path.dirname(__file__), "..", "data", "wyniki_salwa.txt")
+        if os.path.exists(path_salwa):
+            os.remove(path_salwa)
+
+        # Od razu ładujemy to, co jest obecnie w plikach
         self.wczytaj_i_rysuj()
 
     def obsluga_zooma(self, event):
@@ -295,7 +301,7 @@ class GlowneOkno(QMainWindow):
             else:
                 tooltip += "<br><i>Brak przypisania!</i>"
             ellipse.setToolTip(tooltip)
-            
+
     # --- PROBLEM 3: WYNIK SALWY ---
         path_salwa = os.path.join(base_dir, "..", "data", "wyniki_salwa.txt")
         if os.path.exists(path_salwa):
