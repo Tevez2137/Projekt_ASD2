@@ -4,7 +4,7 @@ import subprocess
 import shutil
 from PySide6.QtWidgets import (QApplication, QMainWindow, QGraphicsScene, QMessageBox, QGraphicsView,
                                QDialog, QVBoxLayout, QFormLayout, QLineEdit, QDialogButtonBox, QLabel, QSpinBox,
-                               QFileDialog)
+                               QFileDialog, QPushButton)
 from PySide6.QtGui import QPen, QBrush, QColor
 from PySide6.QtCore import Qt
 
@@ -106,7 +106,7 @@ class GlowneOkno(QMainWindow):
         self.ui.map.setDragMode(QGraphicsView.ScrollHandDrag)
         self.ui.map.wheelEvent = self.obsluga_zooma
         
-        self.ui.pushButton_2.clicked.connect(self.uruchom_silnik_cpp)
+        self.ui.pushButton_2.clicked.connect(self.uruchom_tylko_mcmf)
         self.ui.btnDodajDomek.clicked.connect(self.aktywuj_tryb_dodawania)
         self.ui.odswiezMape.clicked.connect(self.wczytaj_i_rysuj)
 
@@ -115,7 +115,6 @@ class GlowneOkno(QMainWindow):
         self.ui.map.mousePressEvent = self.klikniecie_w_mape
 
         # --- PROBLEM 3: SALWA ---
-        self.ui.pushButton_2.setText("Symuluj Atak")
         self.spin_od = QSpinBox()
         self.spin_do = QSpinBox()
         self.spin_od.setRange(0, 9)
@@ -123,11 +122,18 @@ class GlowneOkno(QMainWindow):
         self.spin_od.setValue(1)
         self.spin_do.setValue(4)
         
+        # Tworzymy oddzielny, nowy przycisk do Salwy
+        self.btn_atak = QPushButton("Symuluj Atak Jabłkami!")
+        self.btn_atak.setStyleSheet("background-color: #c0392b; color: white; font-weight: bold; padding: 5px;")
+        
         self.ui.navbar.addWidget(QLabel("Atak od:"), 4, 0)
         self.ui.navbar.addWidget(self.spin_od, 5, 0)
         self.ui.navbar.addWidget(QLabel("Atak do:"), 6, 0)
         self.ui.navbar.addWidget(self.spin_do, 7, 0)
-        self.ui.pushButton_2.clicked.connect(self.obsluga_ataku_salwa)
+        self.ui.navbar.addWidget(self.btn_atak, 8, 0) # Wrzucamy go pod spinboxy
+        
+        # Podpinamy go pod funkcję ataku
+        self.btn_atak.clicked.connect(self.obsluga_ataku_salwa)
         # ------------------------
 
         # Czyścimy stary wynik ataku (jeśli został z poprzedniego uruchomienia aplikacji)
@@ -151,12 +157,18 @@ class GlowneOkno(QMainWindow):
 
     def obsluga_ataku_salwa(self):
         lewy, prawy = self.spin_od.value(), self.spin_do.value()
-        if lewy > prawy: return
         
         sciezka = os.path.join(os.path.dirname(__file__), "..", "data", "atak.txt")
         with open(sciezka, "w") as f:
             f.write(f"{lewy} {prawy}\n")
             
+        self.uruchom_silnik_cpp()
+
+    def uruchom_tylko_mcmf(self):
+        # Usuwamy plik ataku, żeby silnik C++ obliczył TYLKO grafy i otoczkę, bez pokazywania pop-upów
+        sciezka_atak = os.path.join(os.path.dirname(__file__), "..", "data", "atak.txt")
+        if os.path.exists(sciezka_atak):
+            os.remove(sciezka_atak)
         self.uruchom_silnik_cpp()
 
     def uruchom_silnik_cpp(self):
@@ -308,6 +320,11 @@ class GlowneOkno(QMainWindow):
                     if len(dane) == 2:
                         punkty_otoczki.append((int(dane[0]), int(dane[1])))
 
+            if len(punkty_otoczki) > 0:
+                max_indeks = len(punkty_otoczki) - 1
+                self.spin_od.setRange(0, max_indeks)
+                self.spin_do.setRange(0, max_indeks)
+
             if len(punkty_otoczki) > 1:
                 pen_otoczka = QPen(QColor(155, 89, 182), 3)
                 pen_otoczka.setStyle(Qt.DashLine)
@@ -336,13 +353,44 @@ class GlowneOkno(QMainWindow):
                 tooltip += "<br><i>Brak przypisania!</i>"
             ellipse.setToolTip(tooltip)
 
-    # --- PROBLEM 3: WYNIK SALWY ---
+        # --- PROBLEM 3: WYNIK SALWY ---
         path_salwa = os.path.join(base_dir, "..", "data", "wyniki_salwa.txt")
         if os.path.exists(path_salwa):
-            with open(path_salwa, 'r') as f:
+            with open(path_salwa, 'r', encoding='utf-8') as f:
                 dane = f.readline().strip().split()
                 if len(dane) == 3:
-                    QMessageBox.warning(self, "Atak!", f"Atak na odcinek {dane[0]}-{dane[1]}!\nRozkaz wydaje Dekametrowiec ID: {dane[2]}")
+                    l_idx, r_idx, dowodca = int(dane[0]), int(dane[1]), dane[2]
+                    
+                    # === RYSOWANIE ATAKU NA MAPIE ===
+                    # Sprawdzamy czy mamy wyliczoną otoczkę z Problemu 2
+                    if 'punkty_otoczki' in locals() and len(punkty_otoczki) > 0:
+                        n = len(punkty_otoczki)
+                        pen_atak = QPen(QColor(255, 0, 0), 6) # Gruba czerwona linia
+                        
+                        # 1. Rysujemy czerwoną linię (obsługującą przejście dookoła)
+                        kroki = r_idx - l_idx if r_idx >= l_idx else (n - l_idx + r_idx)
+                        for step in range(kroki):
+                            idx_obecny = (l_idx + step) % n
+                            idx_nastepny = (idx_obecny + 1) % n
+                            p1 = punkty_otoczki[idx_obecny]
+                            p2 = punkty_otoczki[idx_nastepny]
+                            self.scene.addLine(p1[0], p1[1], p2[0], p2[1], pen_atak)
+                        
+                        # 2. Rysujemy czerwony "celownik" na dowódcy
+                        dow_pt = punkty_otoczki[l_idx % n]
+                        self.scene.addEllipse(dow_pt[0] - 20, dow_pt[1] - 20, 40, 40, QPen(QColor(255,0,0), 3))
+                        
+                        # 3. Podpisujemy dowódcę na mapie
+                        tekst = self.scene.addText(f"DOWÓDCA ID: {dowodca}")
+                        tekst.setDefaultTextColor(QColor(255, 0, 0))
+                        font = tekst.font()
+                        font.setBold(True)
+                        font.setPointSize(12)
+                        tekst.setFont(font)
+                        tekst.setPos(dow_pt[0] + 15, dow_pt[1] - 30)
+                    # ==================================
+
+                    QMessageBox.warning(self, "Atak!", f"Atak na odcinek {l_idx}-{r_idx}!\nRozkaz wydaje Dekametrowiec ID: {dowodca}")
             os.remove(path_salwa)
 
 if __name__ == "__main__":

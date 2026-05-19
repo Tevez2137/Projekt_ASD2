@@ -448,20 +448,59 @@ void Graph::obliczSalwe() {
         plikAtak >> lewy_indeks >> prawy_indeks;
         plikAtak.close();
     } else {
-        // Jeśli nie ma pliku ataku, nic nie robimy i wychodzimy
+        // Jeśli nie ma pliku ataku (np. zwykłe uruchomienie MCMF), wychodzimy
         return; 
     }
 
-    // 2. TWORZENIE ODDZIAŁU 
-    // (Póki co testowy, ale docelowo wygenerujesz go z krasnoludków na otoczce)
-    vector<Dekametrowiec> oddzial = {
-        {101, 50}, {102, 80}, {103, 40}, {104, 99}, {105, 60}, {106, 75}, {107, 85},
-        {108, 120}, {109, 30}, {110, 88}
-    };
+    // 2. DYNAMICZNE TWORZENIE ODDZIAŁU NA BAZIE OTOCZKI WYPUKŁEJ
+    vector<Dekametrowiec> oddzial;
+    std::ifstream plikOtoczka("data/otoczka.txt");
     
-    // 3. BUDOWA DRZEWA I ZAPYTANIE
+    if (plikOtoczka.is_open()) {
+        int x, y;
+        int idx = 0;
+        while (plikOtoczka >> x >> y) {
+            // Generujemy unikalne ID: np. 1000, 1001, 1002...
+            int id_dekametrowca = 1000 + idx;
+            
+            // Matematyczny wzór gwarantuje, że głośność zależy od pozycji punktu na mapie
+            // i zawsze będzie stała dla tego samego zestawu kopalń (zakres głośności: 30 - 100)
+            int glosnosc = ((x * 3 + y * 7) % 71) + 30; 
+            
+            oddzial.push_back({id_dekametrowca, glosnosc});
+            idx++;
+        }
+        plikOtoczka.close();
+    }
+
+    // Zabezpieczenie na wypadek braku otoczki
+    if (oddzial.empty()) return;
+
+    int n = oddzial.size();
+    if (lewy_indeks >= n) lewy_indeks = 0;
+    if (prawy_indeks >= n) prawy_indeks = n - 1;
+
     DrzewoPrzedzialowe drzewo(oddzial);
-    int dowodcaID = drzewo.zapytajONajglosniejszego(lewy_indeks, prawy_indeks);
+    int dowodcaID = -1;
+
+    // 3. BUDOWA DRZEWA I ZAPYTANIE (Z obsługą ataku dookoła!)
+    if (lewy_indeks <= prawy_indeks) {
+        // Standardowy atak w linii prostej
+        dowodcaID = drzewo.zapytajONajglosniejszego(lewy_indeks, prawy_indeks);
+    } else {
+        // Atak przechodzący przez "zszycie" granicy (od końca do początku)
+        // Rozbijamy na dwa zapytania do Drzewa Przedziałowego
+        int id1 = drzewo.zapytajONajglosniejszego(lewy_indeks, n - 1);
+        int id2 = drzewo.zapytajONajglosniejszego(0, prawy_indeks);
+        
+        // Sprawdzamy, który z wyłonionych liderów krzyczy głośniej
+        int glosnosc1 = -1, glosnosc2 = -1;
+        for (const auto& d : oddzial) {
+            if (d.ID == id1) glosnosc1 = d.glosnosc;
+            if (d.ID == id2) glosnosc2 = d.glosnosc;
+        }
+        dowodcaID = (glosnosc1 > glosnosc2) ? id1 : id2;
+    }
     
     // 4. ZAPISYWANIE WYNIKU DLA PYTHONA
     std::ofstream plikSalwa("data/wyniki_salwa.txt");
