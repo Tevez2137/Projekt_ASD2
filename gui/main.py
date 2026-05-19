@@ -2,7 +2,7 @@ import sys
 import os
 import subprocess
 from PySide6.QtWidgets import (QApplication, QMainWindow, QGraphicsScene, QMessageBox, QGraphicsView,
-                               QDialog, QVBoxLayout, QFormLayout, QLineEdit, QDialogButtonBox, QLabel)
+                               QDialog, QVBoxLayout, QFormLayout, QLineEdit, QDialogButtonBox, QLabel, QSpinBox)
 from PySide6.QtGui import QPen, QBrush, QColor
 from PySide6.QtCore import Qt
 
@@ -80,6 +80,22 @@ class GlowneOkno(QMainWindow):
         self.oryginalny_mousePressEvent = self.ui.map.mousePressEvent
         self.ui.map.mousePressEvent = self.klikniecie_w_mape
 
+        # --- PROBLEM 3: SALWA ---
+        self.ui.pushButton_2.setText("Symuluj Atak")
+        self.spin_od = QSpinBox()
+        self.spin_do = QSpinBox()
+        self.spin_od.setRange(0, 9)
+        self.spin_do.setRange(0, 9)
+        self.spin_od.setValue(1)
+        self.spin_do.setValue(4)
+        
+        self.ui.navbar.addWidget(QLabel("Atak od:"), 4, 0)
+        self.ui.navbar.addWidget(self.spin_od, 5, 0)
+        self.ui.navbar.addWidget(QLabel("Atak do:"), 6, 0)
+        self.ui.navbar.addWidget(self.spin_do, 7, 0)
+        self.ui.pushButton_2.clicked.connect(self.obsluga_ataku_salwa)
+        # ------------------------
+
         self.wczytaj_i_rysuj()
 
     def obsluga_zooma(self, event):
@@ -92,6 +108,16 @@ class GlowneOkno(QMainWindow):
             zoom_factor = zoom_out_factor
 
         self.ui.map.scale(zoom_factor, zoom_factor)
+
+    def obsluga_ataku_salwa(self):
+        lewy, prawy = self.spin_od.value(), self.spin_do.value()
+        if lewy > prawy: return
+        
+        sciezka = os.path.join(os.path.dirname(__file__), "..", "data", "atak.txt")
+        with open(sciezka, "w") as f:
+            f.write(f"{lewy} {prawy}\n")
+            
+        self.uruchom_silnik_cpp()
 
     def uruchom_silnik_cpp(self):
         self.ui.pushButton_2.setText("Przetwarzam...")
@@ -269,6 +295,15 @@ class GlowneOkno(QMainWindow):
             else:
                 tooltip += "<br><i>Brak przypisania!</i>"
             ellipse.setToolTip(tooltip)
+            
+    # --- PROBLEM 3: WYNIK SALWY ---
+        path_salwa = os.path.join(base_dir, "..", "data", "wyniki_salwa.txt")
+        if os.path.exists(path_salwa):
+            with open(path_salwa, 'r') as f:
+                dane = f.readline().strip().split()
+                if len(dane) == 3:
+                    QMessageBox.warning(self, "Atak!", f"Atak na odcinek {dane[0]}-{dane[1]}!\nRozkaz wydaje Dekametrowiec ID: {dane[2]}")
+            os.remove(path_salwa)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
