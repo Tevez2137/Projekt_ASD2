@@ -22,7 +22,7 @@ const int INF = 1e9;
 void Graph::init()
 {
     // A) Odczyt kopalni
-    ifstream plikKopalnie("data/kopalnie.csv");
+    ifstream plikKopalnie("data/kopalnie_aktywne.csv");
     if (plikKopalnie.is_open())
     {
         string linia;
@@ -59,7 +59,7 @@ void Graph::init()
     }
 
     // B) Odczyt krasnoludków
-    ifstream plikKrasnoludki("data/dane_krasnoludkow.csv");
+    ifstream plikKrasnoludki("data/dane_krasnoludkow_aktywne.csv");
     if (plikKrasnoludki.is_open())
     {
         string linia;

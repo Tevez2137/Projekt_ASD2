@@ -1,8 +1,10 @@
 import sys
 import os
 import subprocess
+import shutil
 from PySide6.QtWidgets import (QApplication, QMainWindow, QGraphicsScene, QMessageBox, QGraphicsView,
-                               QDialog, QVBoxLayout, QFormLayout, QLineEdit, QDialogButtonBox, QLabel, QSpinBox)
+                               QDialog, QVBoxLayout, QFormLayout, QLineEdit, QDialogButtonBox, QLabel, QSpinBox,
+                               QFileDialog)
 from PySide6.QtGui import QPen, QBrush, QColor
 from PySide6.QtCore import Qt
 
@@ -57,6 +59,38 @@ class GlowneOkno(QMainWindow):
         self.ui = Ui_mainWindow()
         self.ui.setupUi(self)
         self.setWindowTitle("System Logistyki Krasnoludków")
+
+        # === SYSTEM WYBORU DOWOLNYCH PLIKÓW ===
+        base_dir = os.path.dirname(__file__)
+        data_dir = os.path.join(base_dir, "..", "data")
+
+        msg = QMessageBox()
+        msg.setWindowTitle("Wybór danych wejściowych")
+        msg.setText("Czy chcesz wczytać domyślne pliki testowe, czy wybrać własne z dysku?")
+        btn_domyslne = msg.addButton("Użyj domyślnych", QMessageBox.AcceptRole)
+        btn_wlasne = msg.addButton("Wybierz własne z dysku...", QMessageBox.ActionRole)
+        msg.exec()
+
+        kopalnie_path = ""
+        krasnale_path = ""
+
+        if msg.clickedButton() == btn_wlasne:
+            # Otwiera systemowe okno wyboru dowolnego pliku!
+            kopalnie_path, _ = QFileDialog.getOpenFileName(self, "Wybierz plik Kopalni (.csv)", data_dir, "CSV Files (*.csv);;All Files (*)")
+            krasnale_path, _ = QFileDialog.getOpenFileName(self, "Wybierz plik Krasnoludków (.csv)", data_dir, "CSV Files (*.csv);;All Files (*)")
+
+        # Jeśli użytkownik nie wybrał plików lub kliknął "Domyślne", ładujemy pliki testowe
+        if not kopalnie_path or not krasnale_path:
+            kopalnie_path = os.path.join(data_dir, "kopalnie_test.csv")
+            krasnale_path = os.path.join(data_dir, "dane_krasnoludkow_test.csv")
+
+        # Kopiujemy wybrane pliki jako pliki "aktywne" (dzięki temu C++ zawsze wie, co czytać)
+        try:
+            shutil.copy(kopalnie_path, os.path.join(data_dir, "kopalnie_aktywne.csv"))
+            shutil.copy(krasnale_path, os.path.join(data_dir, "dane_krasnoludkow_aktywne.csv"))
+        except Exception as e:
+            print(f"Błąd kopiowania plików aktywnych: {e}")
+        # ======================================
         
         self.ui.pushButton_2.setText("Uruchom Algorytm MCMF")
         
@@ -216,8 +250,8 @@ class GlowneOkno(QMainWindow):
 
     def wczytaj_i_rysuj(self):
         base_dir = os.path.dirname(__file__)
-        path_kopalnie = os.path.join(base_dir, "..", "data", "kopalnie.csv")
-        path_krasnoludki = os.path.join(base_dir, "..", "data", "dane_krasnoludkow.csv")
+        path_kopalnie = os.path.join(base_dir, "..", "data", "kopalnie_aktywne.csv")
+        path_krasnoludki = os.path.join(base_dir, "..", "data", "dane_krasnoludkow_aktywne.csv")
         path_otoczka = os.path.join(base_dir, "..", "data", "otoczka.txt")
 
         kopalnie = {}     
