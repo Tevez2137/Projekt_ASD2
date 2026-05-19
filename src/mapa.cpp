@@ -127,7 +127,8 @@ void Graph::init()
 
     this->obliczTraseKsiecia();
     this->obliczSalwe();
-
+    this->obliczKsiegi();
+    
     cout << "Zapisywanie wynikow dla Pythona..." << endl;
     this->saveResults("data/dane_krasnoludkow.csv");
 }
@@ -507,5 +508,52 @@ void Graph::obliczSalwe() {
     if (plikSalwa.is_open()) {
         plikSalwa << lewy_indeks << " " << prawy_indeks << " " << dowodcaID << "\n";
         plikSalwa.close();
+    }
+}
+void Graph::obliczKsiegi() {
+    // 1. Odczyt tekstu kroniki królestwa
+    std::ifstream plikKsiegi("data/ksiega.txt");
+    std::string tekst((std::istreambuf_iterator<char>(plikKsiegi)), std::istreambuf_iterator<char>());
+    plikKsiegi.close();
+
+    // Domyślny tekst, jeśli plik jeszcze nie powstał
+    if (tekst.empty()) {
+        tekst = "Kroniki Krolestwa Sniezki i Ksiecia: Krasnoludki pracuja ciezko w kopalniach zlota i diamentow. Owsianka gotuje sie codziennie rano.";
+        std::ofstream zapiszDomyslna("data/ksiega.txt");
+        zapiszDomyslna << tekst;
+        zapiszDomyslna.close();
+    }
+
+    // 2. Odczyt szukanego słowa kluczowego przesłanego z GUI Pythona
+    std::string wzorzec = "";
+    std::ifstream plikWzorca("data/wzorzec.txt");
+    if (plikWzorca.is_open()) {
+        std::getline(plikWzorca, wzorzec);
+        plikWzorca.close();
+    }
+
+    // Jeśli nie wysłano zapytania o wyszukiwanie tekstowe, wychodzimy
+    if (wzorzec.empty()) return;
+
+    // 3. Wywołanie algorytmów kompresji i wyszukiwania wzorca
+    ElektroniczneKsiegi ek;
+    ek.budujDrzewoHuffmana(tekst);
+    std::string skompresowany = ek.kompresuj(tekst);
+    std::vector<int> znalezionePozycje = ek.szukajRabinKarp(tekst, wzorzec);
+
+    // 4. Zapisanie wyników dla Pythona (bity oryginalne, po kompresji, stopień oszczędności, dopasowania)
+    std::ofstream plikWynikow("data/wyniki_ksiegi.txt");
+    if (plikWynikow.is_open()) {
+        int oryginalneBity = tekst.length() * 8;
+        int skompresowaneBity = skompresowany.length();
+        double stopienOszczednosci = oryginalneBity > 0 ? (1.0 - (double)skompresowaneBity / oryginalneBity) * 100.0 : 0.0;
+
+        plikWynikow << oryginalneBity << " " << skompresowaneBity << " " << stopienOszczednosci << "\n";
+        plikWynikow << znalezionePozycje.size() << "\n";
+        for (int pos : znalezionePozycje) {
+            plikWynikow << pos << " ";
+        }
+        plikWynikow << "\n";
+        plikWynikow.close();
     }
 }

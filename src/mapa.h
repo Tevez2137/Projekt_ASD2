@@ -8,6 +8,7 @@
 // Koniecznie dołączamy nagłówki naszych obiektów!
 #include "kopalnia.h"
 #include "krasnoludek.h"
+#include "ksiegi.h"
 
 // Struktura krawędzi
 struct Edge {
@@ -46,6 +47,7 @@ public:
     
     void obliczTraseKsiecia();
     void obliczSalwe();
+    void obliczKsiegi();
 };
 
 #endif
