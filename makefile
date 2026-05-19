@@ -3,7 +3,7 @@ CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra
 
 # Pliki źródłowe
-SRCS = main.cpp src/mapa.cpp src/kopalnia.cpp src/krasnoludek.cpp src/otoczka.cpp
+SRCS = main.cpp src/mapa.cpp src/kopalnia.cpp src/krasnoludek.cpp src/otoczka.cpp src/dekametrowcy.cpp
 BUILD_DIR = build
 
 # Magia zamiany ścieżek
