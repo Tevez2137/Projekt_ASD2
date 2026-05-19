@@ -45,6 +45,7 @@ public:
     void saveResults(const std::string& filename);   // Zapisuje wyniki do pliku txt
     
     void obliczTraseKsiecia();
+    void obliczSalwe();
 };
 
 #endif

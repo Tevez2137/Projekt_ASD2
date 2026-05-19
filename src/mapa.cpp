@@ -10,6 +10,7 @@
 #include <sstream>
 #include <cmath> // Wymagane dla std::hypot i std::round
 #include <vector>
+#include "dekametrowcy.h"
 
 using namespace std;
 
@@ -125,6 +126,7 @@ void Graph::init()
     this->minCostMaxFlow(this->zrodlo, this->ujscie);
 
     this->obliczTraseKsiecia();
+    this->obliczSalwe();
 
     cout << "Zapisywanie wynikow dla Pythona..." << endl;
     this->saveResults("data/przydzialy.txt");
@@ -421,5 +423,38 @@ void Graph::obliczTraseKsiecia()
     else
     {
         std::cout << "Blad: Nie udalo sie utworzyc pliku otoczka.txt!\n";
+    }
+}
+
+// ==========================================================
+// 8. PROBLEM 3: Salwa Dekametrowcow (Drzewo Przedzialowe)
+// ==========================================================
+void Graph::obliczSalwe() {
+    cout << "---------------------------------------------------\n";
+    cout << "PROBLEM 3: Generowanie Salwy Dekametrowcow...\n";
+    
+    // Przykładowe dane dekametrowców na granicy (ID, głośność)
+    vector<Dekametrowiec> oddzial = {
+        {101, 50}, {102, 80}, {103, 40}, {104, 99}, {105, 60}, {106, 75}, {107, 85}
+    };
+    
+    // Budujemy drzewo z wykładu!
+    DrzewoPrzedzialowe drzewo(oddzial);
+    
+    // Symulujemy atak jabłkami na odcinek od indeksu 1 do 4 (czyli ID: 102, 103, 104, 105)
+    int lewy_indeks = 1;
+    int prawy_indeks = 4;
+    
+    int dowodcaID = drzewo.zapytajONajglosniejszego(lewy_indeks, prawy_indeks);
+    
+    cout << "Atak jablkami na odcinek [" << lewy_indeks << ", " << prawy_indeks << "]!\n";
+    cout << "Rozkazy wydaje dekametrowiec ID: " << dowodcaID << "\n";
+    cout << "---------------------------------------------------\n";
+
+    // Zapisanie wyniku do pliku, żeby Python mógł to odczytać
+    std::ofstream plikSalwa("data/wyniki_salwa.txt");
+    if (plikSalwa.is_open()) {
+        plikSalwa << lewy_indeks << " " << prawy_indeks << " " << dowodcaID << "\n";
+        plikSalwa.close();
     }
 }
