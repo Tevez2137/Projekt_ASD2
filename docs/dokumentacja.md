@@ -88,8 +88,38 @@ Niech $N$ oznacza liczbę dekametrowców na granicy (liczbę punktów na otoczce
 
 ---
 
-## 4. Moduły w trakcie implementacji
-* **Problem 4 (Elektroniczne Księgi):** *[Implementacja planowana z użyciem algorytmów kompresji i wyszukiwania wzorców]*
+## 4. Problem 4: Elektroniczne Księgi (Kompresja i Wyszukiwanie)
+
+### 4.1 Sformalizowanie problemu
+Zadanie polega na optymalizacji przechowywania obszernych archiwów królestwa (zmniejszenie objętości danych tekstowych - "elektronicznego papieru") oraz umożliwieniu błyskawicznego odnajdywania konkretnych fraz i słów w tekstach ksiąg. Problem algorytmiczny sprowadza się do implementacji bezstratnej kompresji tekstu na poziomie bitowym oraz szybkiego algorytmu wyszukiwania wzorców w długich łańcuchach znaków.
+
+### 4.2 Wykorzystane struktury danych
+Dla realizacji tego problemu zastosowano dwie odrębne rodziny struktur:
+* **Kompresja:** **Drzewo binarne** (reprezentujące Drzewo Huffmana, węzły `HuffmanNode`), **Kolejka priorytetowa** (`std::priority_queue` typu Min-Heap) do budowy drzewa z optymalnym czasem dostępu do najmniejszych elementów, oraz **Tablice asocjacyjne** (`std::map`) do zliczania częstotliwości wystąpień znaków i przechowywania przypisanych im kodów binarnych.
+* **Wyszukiwanie:** Struktury wbudowane języka (łańcuchy `std::string`) oraz zmienne całkowitoliczbowe służące jako rejestry dla **wartości funkcji haszujących** (z wykorzystaniem operacji matematycznych modulo do uniknięcia przepełnienia typu).
+
+### 4.3 Opis algorytmu (Huffman i Rabin-Karp)
+Moduł został podzielony na dwa współpracujące, lecz niezależne algorytmy tekstowe:
+1. **Oszczędzanie papieru (Algorytm Huffmana):**
+   * Pierwszym krokiem jest budowa słownika częstotliwości wszystkich znaków występujących w tekście.
+   * Następuje inicjalizacja kolejki priorytetowej, w której każdy unikalny znak staje się pojedynczym węzłem.
+   * Algorytm iteracyjnie pobiera z kolejki dwa węzły o najmniejszej częstotliwości i łączy je w nowy węzeł nadrzędny. Proces powtarza się aż do utworzenia jednego wspólnego korzenia – pełnego Drzewa Huffmana.
+   * Zwieńczeniem jest głębokie przejście drzewa i wygenerowanie unikalnych kodów prefiksowych (ciągów `0` i `1`) dla każdego znaku, co pozwala zamienić tekst na wysoce skompresowany ciąg symboli.
+2. **Szybkie wyszukiwanie (Algorytm Rabina-Karpa):**
+   * Zamiast porównywać szukany wzorzec naiwnie (znak po znaku, dla każdej możliwej pozycji w księdze), algorytm korzysta z matematycznej funkcji haszującej.
+   * Na starcie obliczany jest hasz dla szukanego wzorca oraz dla początkowego "okna" tekstu o tej samej długości.
+   * Podczas przesuwania okna wzdłuż tekstu, nowy hasz jest wyliczany w czasie stałym (*Rolling Hash*). Realizowane jest to poprzez matematyczne odjęcie wartości pierwszego znaku opuszczającego okno i dodanie wartości nowego znaku, który się w nim pojawia.
+   * Tylko w przypadku pełnej zgodności obu haszy, algorytm dokonuje faktycznego porównania znaków, by ostatecznie zatwierdzić znalezisko.
+
+### 4.4 Analiza poprawności
+* **Algorytm Huffmana:** Gwarantuje stworzenie kodów prefiksowych, co oznacza, że żaden kod litery nie jest prefiksem (początkiem) kodu innej litery. Dzięki temu kompresja jest w 100% bezstratna, a dekodowanie z perspektywy maszyny jest absolutnie jednoznaczne. Drzewo gwarantuje wyznaczenie matematycznie optymalnej (najkrótszej) średniej długości kodu dla danego tekstu.
+* **Algorytm Rabina-Karpa:** Użycie manualnego sprawdzenia "znak-po-znaku" w momencie, gdy zrównają się sumy kontrolne (hasze), jest kluczowe dla poprawności. Taki mechanizm gwarantuje brak wyników fałszywie pozytywnych (*False Positives*), które mogłyby się pojawić w wyniku naturalnych kolizji funkcji modulo dla różnych, ale matematycznie podobnych słów.
+
+### 4.5 Złożoność
+Niech $N$ oznacza długość tekstu w księdze, $M$ długość szukanego wzorca, a $A$ wielkość alfabetu (liczbę unikalnych znaków w tekście).
+* **Złożoność pamięciowa:** Drzewo Huffmana oraz pomocnicze mapy wymagają rozmiaru $\mathcal{O}(A)$. Ponieważ operujemy na ograniczonym alfabecie ASCII, $A \le 256$, co w praktyce oznacza narzut pamięciowy rzędu stałego $\mathcal{O}(1)$. Algorytm Rabina-Karpa również operuje w miejscu, wymagając pamięci $\mathcal{O}(1)$, gdyż przechowuje jedynie zmienne dla haszy.
+* **Złożoność czasowa kompresji (Huffman):** Jednokrotne przejście w celu zliczenia znaków zajmuje $\mathcal{O}(N)$. Zbudowanie kolejki i wyciąganie z niej elementów to czas $\mathcal{O}(A \log A)$. Sumarycznie czas wykonania kompresji to optymalne $\mathcal{O}(N + A \log A)$.
+* **Złożoność czasowa wyszukiwania (Rabin-Karp):** Obliczenie początkowego hasza trwa $\mathcal{O}(M)$. Przesunięcie "Rolling Hasha" trwa $\mathcal{O}(1)$ dla każdego znaku tekstu. W przypadku optymistycznym i średnim (niewielka liczba kolizji), czas wyszukiwania jest wysoce zoptymalizowany i wynosi $\mathcal{O}(N + M)$. Tylko w absurdalnie pesymistycznym przypadku (gdzie niemal wszystkie okna generują tę samą sumę kontrolną) czas wyszukiwania degraduje się do liniowo-kwadratowego $\mathcal{O}(N \cdot M)$.
 
 ---
 
