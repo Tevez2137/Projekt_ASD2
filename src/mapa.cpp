@@ -511,7 +511,17 @@ void Graph::obliczSalwe() {
     }
 }
 void Graph::obliczKsiegi() {
-    // 1. Odczyt tekstu kroniki królestwa
+    // 1. Odczyt akcji z GUI (KOMPRESJA czy SZUKAJ)
+    std::ifstream plikAkcji("data/akcja_ksiegi.txt");
+    std::string akcja = "";
+    if (plikAkcji.is_open()) {
+        plikAkcji >> akcja;
+        plikAkcji.close();
+    }
+    // Jeśli nie wybrano akcji dla ksiąg, po prostu wychodzimy
+    if (akcja.empty()) return;
+
+    // 2. Odczyt tekstu kroniki królestwa
     std::ifstream plikKsiegi("data/ksiega.txt");
     std::string tekst((std::istreambuf_iterator<char>(plikKsiegi)), std::istreambuf_iterator<char>());
     plikKsiegi.close();
@@ -524,36 +534,43 @@ void Graph::obliczKsiegi() {
         zapiszDomyslna.close();
     }
 
-    // 2. Odczyt szukanego słowa kluczowego przesłanego z GUI Pythona
-    std::string wzorzec = "";
-    std::ifstream plikWzorca("data/wzorzec.txt");
-    if (plikWzorca.is_open()) {
-        std::getline(plikWzorca, wzorzec);
-        plikWzorca.close();
-    }
-
-    // Jeśli nie wysłano zapytania o wyszukiwanie tekstowe, wychodzimy
-    if (wzorzec.empty()) return;
-
-    // 3. Wywołanie algorytmów kompresji i wyszukiwania wzorca
     ElektroniczneKsiegi ek;
-    ek.budujDrzewoHuffmana(tekst);
-    std::string skompresowany = ek.kompresuj(tekst);
-    std::vector<int> znalezionePozycje = ek.szukajRabinKarp(tekst, wzorzec);
-
-    // 4. Zapisanie wyników dla Pythona (bity oryginalne, po kompresji, stopień oszczędności, dopasowania)
     std::ofstream plikWynikow("data/wyniki_ksiegi.txt");
-    if (plikWynikow.is_open()) {
+
+    // 3. Wykonanie odpowiedniego algorytmu na żądanie
+    if (akcja == "KOMPRESJA") {
+        ek.budujDrzewoHuffmana(tekst);
+        std::string skompresowany = ek.kompresuj(tekst);
+        
         int oryginalneBity = tekst.length() * 8;
         int skompresowaneBity = skompresowany.length();
         double stopienOszczednosci = oryginalneBity > 0 ? (1.0 - (double)skompresowaneBity / oryginalneBity) * 100.0 : 0.0;
 
-        plikWynikow << oryginalneBity << " " << skompresowaneBity << " " << stopienOszczednosci << "\n";
-        plikWynikow << znalezionePozycje.size() << "\n";
-        for (int pos : znalezionePozycje) {
-            plikWynikow << pos << " ";
+        if (plikWynikow.is_open()) {
+            plikWynikow << "KOMPRESJA\n";
+            plikWynikow << oryginalneBity << " " << skompresowaneBity << " " << stopienOszczednosci << "\n";
+            plikWynikow.close();
         }
-        plikWynikow << "\n";
-        plikWynikow.close();
+    } 
+    else if (akcja == "SZUKAJ") {
+        std::string wzorzec = "";
+        std::ifstream plikWzorca("data/wzorzec.txt");
+        if (plikWzorca.is_open()) {
+            std::getline(plikWzorca, wzorzec);
+            plikWzorca.close();
+        }
+        if (wzorzec.empty()) return;
+
+        std::vector<int> znalezionePozycje = ek.szukajRabinKarp(tekst, wzorzec);
+        
+        if (plikWynikow.is_open()) {
+            plikWynikow << "SZUKAJ\n";
+            plikWynikow << znalezionePozycje.size() << "\n";
+            for (int pos : znalezionePozycje) {
+                plikWynikow << pos << " ";
+            }
+            plikWynikow << "\n";
+            plikWynikow.close();
+        }
     }
 }

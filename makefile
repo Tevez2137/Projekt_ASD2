@@ -13,16 +13,20 @@ OBJS = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(SRCS))
 # WYKRYWANIE SYSTEMU OPERACYJNEGO
 # ==========================================
 ifeq ($(OS),Windows_NT)
-	# Na Windowsie dodajemy tylko .exe
-	TARGET = symulacja_krasnoludkow.exe
+    # Ustawienia dla Windows (cmd.exe)
+    TARGET = symulacja_krasnoludkow.exe
+    CLEAN_CMD = if exist $(BUILD_DIR) rmdir /S /Q $(BUILD_DIR)
+    # Hack na tworzenie folderów w locie pod CMD:
+    MKDIR_CMD = if not exist "$(subst /,\,$(dir $@))" mkdir "$(subst /,\,$(dir $@))"
+    RUN_CMD = $(BUILD_DIR)\$(TARGET)
 else
-	# Na Linux / Mac bez .exe
-	TARGET = symulacja_krasnoludkow
+    # Ustawienia dla Linux / Mac
+    TARGET = symulacja_krasnoludkow
+    CLEAN_CMD = rm -rf $(BUILD_DIR)
+    MKDIR_CMD = mkdir -p $(dir $@)
+    RUN_CMD = ./$(BUILD_DIR)/$(TARGET)
 endif
-
-CLEAN_CMD = rm -rf $(BUILD_DIR)
-MKDIR_CMD = mkdir -p $(dir $@)
-RUN_CMD = ./$(BUILD_DIR)/$(TARGET)
+# ==========================================
 
 # Domyślna reguła
 all: $(BUILD_DIR)/$(TARGET)
@@ -32,8 +36,8 @@ $(BUILD_DIR)/$(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $(OBJS)
 
 # Kompilacja plików .cpp do .o w folderze build
-$(BUILD_DIR)/%.o: %.cpp
-	@$(MKDIR_CMD)
+build/src/%.o: src/%.cpp
+	@mkdir -p build/src
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # Odpalanie

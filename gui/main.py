@@ -135,6 +135,25 @@ class GlowneOkno(QMainWindow):
         # Podpinamy go pod funkcję ataku
         self.btn_atak.clicked.connect(self.obsluga_ataku_salwa)
         # ------------------------
+        # --- PROBLEM 4: ELEKTRONICZNE KSIĘGI ---
+        self.btn_kompresja = QPushButton("Skompresuj Księgę (Huffman)")
+        self.btn_kompresja.setStyleSheet("background-color: #8e44ad; color: white; font-weight: bold; padding: 5px;")
+        
+        self.input_szukaj = QLineEdit()
+        self.input_szukaj.setPlaceholderText("np. Sniezki, kopalniach")
+        
+        self.btn_szukaj = QPushButton("Szukaj w Księdze (Rabin-Karp)")
+        self.btn_szukaj.setStyleSheet("background-color: #27ae60; color: white; font-weight: bold; padding: 5px;")
+        
+        self.ui.navbar.addWidget(QLabel("---"), 9, 0)
+        self.ui.navbar.addWidget(self.btn_kompresja, 10, 0)
+        self.ui.navbar.addWidget(QLabel("Szukaj frazy:"), 11, 0)
+        self.ui.navbar.addWidget(self.input_szukaj, 12, 0)
+        self.ui.navbar.addWidget(self.btn_szukaj, 13, 0)
+        
+        self.btn_kompresja.clicked.connect(self.obsluga_kompresji_ksiegi)
+        self.btn_szukaj.clicked.connect(self.obsluga_wyszukiwania_ksiegi)
+        # --------------------------------------
 
         # Czyścimy stary wynik ataku (jeśli został z poprzedniego uruchomienia aplikacji)
         path_salwa = os.path.join(os.path.dirname(__file__), "..", "data", "wyniki_salwa.txt")
@@ -143,6 +162,8 @@ class GlowneOkno(QMainWindow):
 
         # Od razu ładujemy to, co jest obecnie w plikach
         self.wczytaj_i_rysuj()
+
+        
 
     def obsluga_zooma(self, event):
         zoom_in_factor = 1.15
@@ -156,6 +177,11 @@ class GlowneOkno(QMainWindow):
         self.ui.map.scale(zoom_factor, zoom_factor)
 
     def obsluga_ataku_salwa(self):
+        # --- SPRZĄTANIE ---
+        path_akcja = os.path.join(os.path.dirname(__file__), "..", "data", "akcja_ksiegi.txt")
+        if os.path.exists(path_akcja): os.remove(path_akcja)
+        # ------------------
+
         lewy, prawy = self.spin_od.value(), self.spin_do.value()
         
         sciezka = os.path.join(os.path.dirname(__file__), "..", "data", "atak.txt")
@@ -165,10 +191,46 @@ class GlowneOkno(QMainWindow):
         self.uruchom_silnik_cpp()
 
     def uruchom_tylko_mcmf(self):
-        # Usuwamy plik ataku, żeby silnik C++ obliczył TYLKO grafy i otoczkę, bez pokazywania pop-upów
-        sciezka_atak = os.path.join(os.path.dirname(__file__), "..", "data", "atak.txt")
-        if os.path.exists(sciezka_atak):
-            os.remove(sciezka_atak)
+        # Czyścimy pliki ataku i księgi, by silnik C++ obliczył TYLKO grafy
+        sciezki_do_usuniecia = ["atak.txt", "akcja_ksiegi.txt"]
+        for plik in sciezki_do_usuniecia:
+            pelna_sciezka = os.path.join(os.path.dirname(__file__), "..", "data", plik)
+            if os.path.exists(pelna_sciezka):
+                os.remove(pelna_sciezka)
+        self.uruchom_silnik_cpp()
+
+    def obsluga_kompresji_ksiegi(self):
+        # --- SPRZĄTANIE ---
+        path_atak = os.path.join(os.path.dirname(__file__), "..", "data", "atak.txt")
+        if os.path.exists(path_atak): os.remove(path_atak)
+        # ------------------
+
+        base_dir = os.path.dirname(__file__)
+        path_akcja = os.path.join(base_dir, "..", "data", "akcja_ksiegi.txt")
+        with open(path_akcja, "w", encoding="utf-8") as f:
+            f.write("KOMPRESJA")
+        self.uruchom_silnik_cpp()
+
+    def obsluga_wyszukiwania_ksiegi(self):  
+        fraza = self.input_szukaj.text().strip()
+        if not fraza:
+            QMessageBox.warning(self, "Błąd", "Wpisz słowo, którego szukasz w elektronicznych księgach!")
+            return
+            
+        # --- SPRZĄTANIE ---
+        path_atak = os.path.join(os.path.dirname(__file__), "..", "data", "atak.txt")
+        if os.path.exists(path_atak): os.remove(path_atak)
+        # ------------------
+            
+        base_dir = os.path.dirname(__file__)
+        path_akcja = os.path.join(base_dir, "..", "data", "akcja_ksiegi.txt")
+        path_wzorzec = os.path.join(base_dir, "..", "data", "wzorzec.txt")
+        
+        with open(path_akcja, "w", encoding="utf-8") as f:
+            f.write("SZUKAJ")
+        with open(path_wzorzec, "w", encoding="utf-8") as f:
+            f.write(fraza)
+            
         self.uruchom_silnik_cpp()
 
     def uruchom_silnik_cpp(self):
@@ -392,6 +454,41 @@ class GlowneOkno(QMainWindow):
 
                     QMessageBox.warning(self, "Atak!", f"Atak na odcinek {l_idx}-{r_idx}!\nRozkaz wydaje Dekametrowiec ID: {dowodca}")
             os.remove(path_salwa)
+        # --- PROBLEM 4: ODCZYT WYNIKÓW KSIĘGI ---
+        path_wyniki_ksiegi = os.path.join(base_dir, "..", "data", "wyniki_ksiegi.txt")
+        path_akcja = os.path.join(base_dir, "..", "data", "akcja_ksiegi.txt")
+        
+        if os.path.exists(path_wyniki_ksiegi):
+            try:
+                with open(path_wyniki_ksiegi, 'r', encoding='utf-8') as f:
+                    akcja = f.readline().strip()
+                    
+                    if akcja == "KOMPRESJA":
+                        stats = f.readline().strip().split()
+                        if len(stats) == 3:
+                            oryg, skomp, proc = stats
+                            msg_text = (
+                                f"📝 === KOMPRESJA ZAKOŃCZONA ===\n"
+                                f"Rozmiar oryginalnego tekstu: {oryg} bitów\n"
+                                f"Rozmiar po kompresji (Drzewo Huffmana): {skomp} bitów\n"
+                                f"Zaoszczędzone miejsce w księgach: {float(proc):.2f}%"
+                            )
+                            QMessageBox.information(self, "Elektroniczne Księgi - Huffman", msg_text)
+                            
+                    elif akcja == "SZUKAJ":
+                        liczba_znalezien = f.readline().strip()
+                        pozycje = f.readline().strip()
+                        msg_text = f"🔍 === WYSZUKIWANIE (RABIN-KARP) ===\nZnaleziono {liczba_znalezien} pasujących fragmentów tekstu.\n"
+                        if int(liczba_znalezien) > 0:
+                            msg_text += f"\nPozycje literowe wzorca w pliku: {pozycje}"
+                        QMessageBox.information(self, "Elektroniczne Księgi - Rabin-Karp", msg_text)
+                
+                # Sprzątamy pliki komunikacyjne po wyświetleniu okienka
+                os.remove(path_wyniki_ksiegi)
+                if os.path.exists(path_akcja):
+                    os.remove(path_akcja)
+            except Exception as e:
+                print(f"Błąd odczytu wyników księgi: {e}")     
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
