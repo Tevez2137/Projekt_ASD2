@@ -10,19 +10,33 @@ BUILD_DIR = build
 OBJS = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(SRCS))
 
 # ==========================================
-# WYKRYWANIE SYSTEMU OPERACYJNEGO
+# SUPER WYKRYWANIE SYSTEMU I KONSOLI
 # ==========================================
 ifeq ($(OS),Windows_NT)
-	# Na Windowsie dodajemy tylko .exe
 	TARGET = symulacja_krasnoludkow.exe
+	
+	# Sprawdzamy, czy powłoka to uniksowe 'sh' (Twoje MSYS2) czy cmd.exe (Kumpel)
+	ifneq (,$(findstring sh,$(SHELL)))
+		# ---------- USTAWIENIA DLA CIEBIE (MSYS2) ----------
+		MKDIR_CMD = mkdir -p $(dir $@)
+		CLEAN_CMD = rm -rf $(BUILD_DIR)
+		RUN_CMD = ./$(BUILD_DIR)/$(TARGET)
+	else
+		# ---------- USTAWIENIA DLA KUMPLA (CMD) ----------
+		# Usuwamy końcowy ukośnik, żeby nie psuć cudzysłowów w Windowsie
+		DIR_NO_SLASH = $(patsubst %/,%,$(dir $@))
+		MKDIR_CMD = if not exist "$(subst /,\,$(DIR_NO_SLASH))" mkdir "$(subst /,\,$(DIR_NO_SLASH))"
+		CLEAN_CMD = if exist $(BUILD_DIR) rmdir /S /Q $(BUILD_DIR)
+		RUN_CMD = $(BUILD_DIR)\$(TARGET)
+	endif
 else
-	# Na Linux / Mac bez .exe
+	# ---------- USTAWIENIA DLA LINUX / MAC ----------
 	TARGET = symulacja_krasnoludkow
+	MKDIR_CMD = mkdir -p $(dir $@)
+	CLEAN_CMD = rm -rf $(BUILD_DIR)
+	RUN_CMD = ./$(BUILD_DIR)/$(TARGET)
 endif
-
-CLEAN_CMD = rm -rf $(BUILD_DIR)
-MKDIR_CMD = mkdir -p $(dir $@)
-RUN_CMD = ./$(BUILD_DIR)/$(TARGET)
+# ==========================================
 
 # Domyślna reguła
 all: $(BUILD_DIR)/$(TARGET)
