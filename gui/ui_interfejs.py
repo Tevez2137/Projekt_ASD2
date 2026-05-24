@@ -118,6 +118,21 @@ class Ui_mainWindow(object):
         self.tab_ksiegi.setObjectName(u"tab_ksiegi")
         self.verticalLayout_3 = QVBoxLayout(self.tab_ksiegi)
         self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.horizontalLayout_import_eksport = QHBoxLayout()
+        self.horizontalLayout_import_eksport.setObjectName(u"horizontalLayout_import_eksport")
+        self.btn_import_csv = QPushButton(self.tab_ksiegi)
+        self.btn_import_csv.setObjectName(u"btn_import_csv")
+
+        self.horizontalLayout_import_eksport.addWidget(self.btn_import_csv)
+
+        self.btn_eksport_csv = QPushButton(self.tab_ksiegi)
+        self.btn_eksport_csv.setObjectName(u"btn_eksport_csv")
+
+        self.horizontalLayout_import_eksport.addWidget(self.btn_eksport_csv)
+
+
+        self.verticalLayout_3.addLayout(self.horizontalLayout_import_eksport)
+
         self.btn_kompresja = QPushButton(self.tab_ksiegi)
         self.btn_kompresja.setObjectName(u"btn_kompresja")
 
@@ -167,6 +182,8 @@ class Ui_mainWindow(object):
         self.label_do.setText(QCoreApplication.translate("mainWindow", u"Koniec odcinka ataku:", None))
         self.btn_atak.setText(QCoreApplication.translate("mainWindow", u"Wezwij Dekametrowc\u00f3w!", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_obrona), QCoreApplication.translate("mainWindow", u"\U0001f3f9 Obrona Granic", None))
+        self.btn_import_csv.setText(QCoreApplication.translate("mainWindow", u"Importuj Baz\u0119 Danych (CSV)", None))
+        self.btn_eksport_csv.setText(QCoreApplication.translate("mainWindow", u"Eksportuj Wyniki (CSV)", None))
         self.btn_kompresja.setText(QCoreApplication.translate("mainWindow", u"Kompresuj Archiwa (Huffman)", None))
         self.input_szukaj.setPlaceholderText(QCoreApplication.translate("mainWindow", u"Wpisz szukan\u0105 run\u0119/s\u0142owo...", None))
         self.btn_szukaj.setText(QCoreApplication.translate("mainWindow", u"Przeszukaj Ksi\u0119gi (Rabin-Karp)", None))

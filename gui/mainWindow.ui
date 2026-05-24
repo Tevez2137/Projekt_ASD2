@@ -128,6 +128,20 @@
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_3">
         <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_import_eksport">
+          <item>
+           <widget class="QPushButton" name="btn_import_csv">
+            <property name="text"><string>Importuj Bazę Danych (CSV)</string></property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btn_eksport_csv">
+            <property name="text"><string>Eksportuj Wyniki (CSV)</string></property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
          <widget class="QPushButton" name="btn_kompresja">
           <property name="text"><string>Kompresuj Archiwa (Huffman)</string></property>
          </widget>

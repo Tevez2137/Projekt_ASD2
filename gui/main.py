@@ -60,40 +60,6 @@ class GlowneOkno(QMainWindow):
         self.ui.setupUi(self)
         self.setWindowTitle("System Logistyki Krasnoludków")
 
-        # === SYSTEM WYBORU DOWOLNYCH PLIKÓW ===
-        base_dir = os.path.dirname(__file__)
-        data_dir = os.path.join(base_dir, "..", "data")
-
-        msg = QMessageBox()
-        msg.setWindowTitle("Wybór danych wejściowych")
-        msg.setText("Czy chcesz wczytać domyślne pliki testowe, czy wybrać własne z dysku?")
-        btn_domyslne = msg.addButton("Użyj domyślnych", QMessageBox.AcceptRole)
-        btn_wlasne = msg.addButton("Wybierz własne z dysku...", QMessageBox.ActionRole)
-        msg.exec()
-
-        kopalnie_path = ""
-        krasnale_path = ""
-
-        if msg.clickedButton() == btn_wlasne:
-            # Otwiera systemowe okno wyboru dowolnego pliku!
-            kopalnie_path, _ = QFileDialog.getOpenFileName(self, "Wybierz plik Kopalni (.csv)", data_dir, "CSV Files (*.csv);;All Files (*)")
-            krasnale_path, _ = QFileDialog.getOpenFileName(self, "Wybierz plik Krasnoludków (.csv)", data_dir, "CSV Files (*.csv);;All Files (*)")
-
-        # Jeśli użytkownik nie wybrał plików lub kliknął "Domyślne", ładujemy pliki testowe
-        if not kopalnie_path or not krasnale_path:
-            kopalnie_path = os.path.join(data_dir, "kopalnie_test.csv")
-            krasnale_path = os.path.join(data_dir, "dane_krasnoludkow_test.csv")
-
-        # Kopiujemy wybrane pliki jako pliki "aktywne" (dzięki temu C++ zawsze wie, co czytać)
-        try:
-            shutil.copy(kopalnie_path, os.path.join(data_dir, "kopalnie_aktywne.csv"))
-            shutil.copy(krasnale_path, os.path.join(data_dir, "dane_krasnoludkow_aktywne.csv"))
-        except Exception as e:
-            print(f"Błąd kopiowania plików aktywnych: {e}")
-        # ======================================
-        
-        # ======================================
-        
         style_path = os.path.join(os.path.dirname(__file__), "style.qss")
         try:
             with open(style_path, "r", encoding="utf-8") as f:
@@ -118,6 +84,10 @@ class GlowneOkno(QMainWindow):
         self.ui.btn_atak.clicked.connect(self.obsluga_ataku_salwa)
         self.ui.btn_kompresja.clicked.connect(self.obsluga_kompresji_ksiegi)
         self.ui.btn_szukaj.clicked.connect(self.obsluga_wyszukiwania_ksiegi)
+        
+        # Nowe przyciski w zakładce Księgi
+        self.ui.btn_import_csv.clicked.connect(self.import_danych)
+        self.ui.btn_eksport_csv.clicked.connect(self.eksport_danych)
         # --------------------------------------
 
         # Czyścimy stary wynik ataku (jeśli został z poprzedniego uruchomienia aplikacji)
@@ -129,6 +99,56 @@ class GlowneOkno(QMainWindow):
         self.wczytaj_i_rysuj()
 
         
+
+    def import_danych(self):
+        base_dir = os.path.dirname(__file__)
+        data_dir = os.path.join(base_dir, "..", "data")
+        project_dir = os.path.join(base_dir, "..")
+        
+        if sys.platform == "win32":
+            exe_path = os.path.join(project_dir, "build", "symulacja_krasnoludkow.exe")
+        else:
+            exe_path = os.path.join(project_dir, "build", "symulacja_krasnoludkow")
+            
+        kopalnie_path, _ = QFileDialog.getOpenFileName(self, "Wybierz plik Kopalni (.csv)", data_dir, "CSV Files (*.csv)")
+        krasnale_path, _ = QFileDialog.getOpenFileName(self, "Wybierz plik Krasnoludków (.csv)", data_dir, "CSV Files (*.csv)")
+        
+        if kopalnie_path and krasnale_path:
+            try:
+                # Omijamy jawne kopiowanie csv - C++ weźmie te pliki i wrzuci od razu do .bin!
+                subprocess.run(
+                    [exe_path, "IMPORT", kopalnie_path, krasnale_path],
+                    cwd=project_dir,
+                    check=True,
+                    capture_output=True,
+                    text=True
+                )
+                self.wczytaj_i_rysuj()
+                QMessageBox.information(self, "Import", "Dane zostały skompresowane w locie i zaimportowane pomyślnie (baza BIN)!")
+            except Exception as e:
+                QMessageBox.critical(self, "Błąd", f"Nie udało się zaimportować plików: {e}")
+
+    def eksport_danych(self):
+        base_dir = os.path.dirname(__file__)
+        project_dir = os.path.join(base_dir, "..")
+        if sys.platform == "win32":
+            exe_path = os.path.join(project_dir, "build", "symulacja_krasnoludkow.exe")
+        else:
+            exe_path = os.path.join(project_dir, "build", "symulacja_krasnoludkow")
+        
+        docelowa, _ = QFileDialog.getSaveFileName(self, "Eksportuj wyniki", "", "CSV Files (*.csv)")
+        if docelowa:
+            try:
+                subprocess.run(
+                    [exe_path, "EKSPORT", docelowa],
+                    cwd=project_dir,
+                    check=True,
+                    capture_output=True,
+                    text=True
+                )
+                QMessageBox.information(self, "Eksport", "Dane wypakowane z bazy BIN i wyeksportowane pomyślnie!")
+            except Exception as e:
+                QMessageBox.critical(self, "Błąd", f"Nie udało się wyeksportować: {e}")
 
     def obsluga_zooma(self, event):
         zoom_in_factor = 1.15
@@ -199,8 +219,8 @@ class GlowneOkno(QMainWindow):
         self.uruchom_silnik_cpp()
 
     def uruchom_silnik_cpp(self):
-        self.ui.pushButton_2.setText("Przetwarzam...")
-        self.ui.pushButton_2.setEnabled(False)
+        self.ui.btnUruchomMCMF.setText("Przetwarzam...")
+        self.ui.btnUruchomMCMF.setEnabled(False)
         QApplication.processEvents()
 
         try:
@@ -234,8 +254,8 @@ class GlowneOkno(QMainWindow):
         except subprocess.CalledProcessError as e:
             QMessageBox.critical(self, "Błąd", f"Algorytm C++ napotkał błąd:\n{e.stderr}")
         finally:
-            self.ui.pushButton_2.setText("Uruchom Algorytm MCMF")
-            self.ui.pushButton_2.setEnabled(True)
+            self.ui.btnUruchomMCMF.setText("Uruchom Algorytm MCMF")
+            self.ui.btnUruchomMCMF.setEnabled(True)
 
     def aktywuj_tryb_dodawania(self):
         self.tryb_dodawania = True
@@ -245,18 +265,28 @@ class GlowneOkno(QMainWindow):
         self.ui.statusbar.showMessage("Kliknij lewym przyciskiem myszy na mapie, aby wskazać pozycję domku.", 6000)
 
     def pobierz_nastepne_id(self):
-        """Przeszukuje plik CSV w poszukiwaniu najwyższego nadanego ID i zwraca ID + 1."""
+        """Przeszukuje bazę BIN w poszukiwaniu najwyższego nadanego ID i zwraca ID + 1."""
         base_dir = os.path.dirname(__file__)
-        path = os.path.join(base_dir, "..", "data", "dane_krasnoludkow.csv")
+        project_dir = os.path.join(base_dir, "..")
+        if sys.platform == "win32":
+            exe_path = os.path.join(project_dir, "build", "symulacja_krasnoludkow.exe")
+        else:
+            exe_path = os.path.join(project_dir, "build", "symulacja_krasnoludkow")
+        
         max_id = 0
         try:
-            with open(path, 'r', encoding='utf-8') as f:
-                next(f) # Pomiń nagłówek
-                for linia in f:
-                    dane = linia.strip().split(',')
+            result = subprocess.run([exe_path, "GUI_DATA_DUMP"], cwd=project_dir, capture_output=True, text=True, check=True)
+            kras_sekcja = False
+            for linia in result.stdout.split("\n"):
+                linia = linia.strip()
+                if linia == "---KRASNOLUDKI---":
+                    kras_sekcja = True
+                    continue
+                if kras_sekcja and linia and not linia.startswith("ID"):
+                    dane = linia.split(',')
                     if len(dane) > 0 and dane[0].isdigit():
                         max_id = max(max_id, int(dane[0]))
-        except FileNotFoundError:
+        except Exception:
             pass
         return max_id + 1
 
@@ -286,47 +316,63 @@ class GlowneOkno(QMainWindow):
 
     def zapisz_krasnala_do_csv(self, dane):
         base_dir = os.path.dirname(__file__)
-        path = os.path.join(base_dir, "..", "data", "dane_krasnoludkow.csv")
+        project_dir = os.path.join(base_dir, "..")
+        if sys.platform == "win32":
+            exe_path = os.path.join(project_dir, "build", "symulacja_krasnoludkow.exe")
+        else:
+            exe_path = os.path.join(project_dir, "build", "symulacja_krasnoludkow")
         try:
-            with open(path, 'a', encoding='utf-8') as f:
-                linia = f"{dane['id']},{dane['id_kop']},{dane['mineraly']},{dane['x']},{dane['y']}\n"
-                f.write(linia)
-            
-            self.ui.statusbar.showMessage(f"Zarejestrowano krasnoludka o ID {dane['id']}. Przeliczam trasy...", 4000)
+            subprocess.run(
+                [exe_path, "ADD_DWARF", str(dane['id']), str(dane['id_kop']), dane['mineraly'], str(dane['x']), str(dane['y'])],
+                cwd=project_dir, check=True, capture_output=True, text=True
+            )
+            self.ui.statusbar.showMessage(f"Zarejestrowano krasnoludka w bazie BIN (ID {dane['id']}). Przeliczam trasy...", 4000)
             self.uruchom_silnik_cpp()
 
         except Exception as e:
-            QMessageBox.critical(self, "Błąd zapisu", f"Nie udało się dopisać krasnoludka do bazy CSV:\n{e}")
+            QMessageBox.critical(self, "Błąd zapisu", f"Nie udało się dopisać krasnoludka do bazy BIN:\n{e}")
 
     def wczytaj_i_rysuj(self):
         base_dir = os.path.dirname(__file__)
-        path_kopalnie = os.path.join(base_dir, "..", "data", "kopalnie_aktywne.csv")
-        path_krasnoludki = os.path.join(base_dir, "..", "data", "dane_krasnoludkow_aktywne.csv")
+        project_dir = os.path.join(base_dir, "..")
+        if sys.platform == "win32":
+            exe_path = os.path.join(project_dir, "build", "symulacja_krasnoludkow.exe")
+        else:
+            exe_path = os.path.join(project_dir, "build", "symulacja_krasnoludkow")
         path_otoczka = os.path.join(base_dir, "..", "data", "otoczka.txt")
 
         kopalnie = {}     
-        krasnoludki = {}  
+        krasnoludki = {}
 
-        # Wczytywanie kopalń
         try:
-            with open(path_kopalnie, 'r', encoding='utf-8') as f:
-                next(f)
-                for linia in f:
-                    dane = linia.strip().split(',')
+            # Pytamy C++ o zdekompresowane dane BIN
+            result = subprocess.run([exe_path, "GUI_DATA_DUMP"], cwd=project_dir, capture_output=True, text=True, check=True)
+            output = result.stdout
+            
+            kop_sekcja = False
+            kras_sekcja = False
+            
+            for linia in output.split("\n"):
+                linia = linia.strip()
+                if not linia: continue
+                if linia == "---KOPALNIE---":
+                    kop_sekcja = True
+                    kras_sekcja = False
+                    continue
+                if linia == "---KRASNOLUDKI---":
+                    kop_sekcja = False
+                    kras_sekcja = True
+                    continue
+                
+                if kop_sekcja and not linia.startswith("ID"):
+                    dane = linia.split(',')
                     if len(dane) >= 4:
                         kopalnie[int(dane[0])] = {
                             "x": int(dane[1]), "y": int(dane[2]),
                             "surowiec": dane[3], "miejsca": dane[4]
                         }
-        except Exception as e:
-            print(f"Błąd ładowania kopalń: {e}")
-
-        # Wczytywanie krasnoludków
-        try:
-            with open(path_krasnoludki, 'r', encoding='utf-8') as f:
-                next(f)
-                for linia in f:
-                    dane = linia.strip().split(',')
+                elif kras_sekcja and not linia.startswith("ID"):
+                    dane = linia.split(',')
                     if len(dane) >= 5:
                         id_krasnala = int(dane[0])
                         id_kop = int(dane[1]) if dane[1].isdigit() else 0
@@ -336,8 +382,9 @@ class GlowneOkno(QMainWindow):
                             "x": int(dane[3]), 
                             "y": int(dane[4])
                         }
+                    
         except Exception as e:
-            print(f"Błąd ładowania krasnoludków: {e}")
+            print(f"Błąd odczytu bazy BIN przez Python: {e}")
 
         self.scene.clear()
 
@@ -455,12 +502,35 @@ class GlowneOkno(QMainWindow):
                     elif akcja == "SZUKAJ":
                         liczba_znalezien = f.readline().strip()
                         pozycje = f.readline().strip()
-                        msg_text = f"<h3 style='color:#d4af37;'>🔍 === WYSZUKIWANIE (RABIN-KARP) ===</h3>"
+                        
+                        ksiega_path = os.path.join(base_dir, "..", "data", "ksiega.txt")
+                        wzorzec_path = os.path.join(base_dir, "..", "data", "wzorzec.txt")
+                        pelny_tekst = ""
+                        try:
+                            with open(ksiega_path, "r") as kf:
+                                pelny_tekst = kf.read()
+                        except:
+                            pass
+                            
+                        wzorzec = ""
+                        try:
+                            with open(wzorzec_path, "r") as wf:
+                                wzorzec = wf.read().strip()
+                        except:
+                            pass
+
+                        if pelny_tekst and wzorzec and int(liczba_znalezien) > 0:
+                            # Highlight found word
+                            pelny_tekst = pelny_tekst.replace(wzorzec, f"<span style='background-color: #f1c40f; color: #2c3e50; font-weight: bold; padding: 2px;'>{wzorzec}</span>")
+                            
+                        msg_text = f"<h3 style='color:#d4af37;'>🔍 WYNIKI (RABIN-KARP)</h3>"
                         msg_text += f"<p>Znaleziono <b>{liczba_znalezien}</b> pasujących fragmentów tekstu.</p>"
                         if int(liczba_znalezien) > 0:
-                            msg_text += f"<p>Pozycje literowe wzorca w pliku: {pozycje}</p>"
+                            msg_text += f"<p>Pozycje: {pozycje}</p>"
+                            
+                        msg_text += f"<hr><p style='font-size: 16px; line-height: 1.5; color: #ecf0f1;'>{pelny_tekst}</p>"
+                            
                         self.ui.textBrowser_ksiegi.setHtml(msg_text)
-                        QMessageBox.information(self, "Elektroniczne Księgi - Rabin-Karp", "Wyszukiwanie zakończone.")
                 
                 # Sprzątamy pliki komunikacyjne po wyświetleniu okienka
                 os.remove(path_wyniki_ksiegi)
