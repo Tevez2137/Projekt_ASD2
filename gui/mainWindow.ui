@@ -2,176 +2,78 @@
 <ui version="4.0">
  <class>mainWindow</class>
  <widget class="QMainWindow" name="mainWindow">
+  <property name="windowModality">
+   <enum>Qt::WindowModality::NonModal</enum>
+  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1100</width>
-    <height>750</height>
+    <width>898</width>
+    <height>729</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Królestwo Krasnoludków - Panel Dowodzenia</string>
+   <string>Statystyki Królestwa</string>
+  </property>
+  <property name="autoFillBackground">
+   <bool>false</bool>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QHBoxLayout" name="horizontalLayout">
-    
-    <!-- LEWA STRONA: MAPA -->
-    <item>
-     <widget class="QGraphicsView" name="map">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-        <horstretch>3</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
+   <layout class="QGridLayout" name="gridLayout">
+    <item row="4" column="6">
+     <widget class="QGraphicsView" name="map"/>
+    </item>
+    <item row="4" column="3">
+     <layout class="QGridLayout" name="navbar">
+      <item row="3" column="0">
+       <widget class="QPushButton" name="pushButton_2">
+        <property name="text">
+         <string>PushButton</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QPushButton" name="odswiezMape">
+        <property name="text">
+         <string>Odśwież Mapę</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QPushButton" name="btnDodajDomek">
+        <property name="text">
+         <string>Dodaj domek</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item row="5" column="5" colspan="2">
+     <widget class="QLabel" name="statusBar">
+      <property name="text">
+       <string/>
       </property>
      </widget>
     </item>
-
-    <!-- PRAWA STRONA: ZAKŁADKI (TABS) -->
-    <item>
-     <widget class="QTabWidget" name="tabWidget">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-        <horstretch>1</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <property name="currentIndex">
-       <number>0</number>
-      </property>
-
-      <!-- ZAKŁADKA 1: LOGISTYKA (Wydobycie i Kopalnie) -->
-      <widget class="QWidget" name="tab_logistyka">
-       <attribute name="title">
-        <string>⛏️ Logistyka</string>
-       </attribute>
-       <layout class="QVBoxLayout" name="verticalLayout_1">
-        <item>
-         <widget class="QLabel" name="labelLogistykaTytul">
-          <property name="text">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:14pt; font-weight:600; color:#d4af37;&quot;&gt;Zarządzanie Owsianką&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="btnDodajDomek">
-          <property name="text"><string>Wznieś Nowy Domek</string></property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="odswiezMape">
-          <property name="text"><string>Zbadaj Teren (Odśwież)</string></property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="btnUruchomMCMF">
-          <property name="text"><string>Oblicz Trasy Wydobycia (MCMF)</string></property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="verticalSpacer_1">
-          <property name="orientation"><enum>Qt::Vertical</enum></property>
-          <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
-         </spacer>
-        </item>
-       </layout>
-      </widget>
-
-      <!-- ZAKŁADKA 2: OBRONA GRANIC (Salwa i Otoczka) -->
-      <widget class="QWidget" name="tab_obrona">
-       <attribute name="title">
-        <string>🏹 Obrona Granic</string>
-       </attribute>
-       <layout class="QVBoxLayout" name="verticalLayout_2">
-        <item>
-         <widget class="QLabel" name="labelObronaTytul">
-          <property name="text">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:14pt; font-weight:600; color:#d4af37;&quot;&gt;System Wczesnego Ostrzegania&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_od">
-          <property name="text"><string>Początek odcinka ataku:</string></property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QSpinBox" name="spin_od"/>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_do">
-          <property name="text"><string>Koniec odcinka ataku:</string></property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QSpinBox" name="spin_do"/>
-        </item>
-        <item>
-         <widget class="QPushButton" name="btn_atak">
-          <property name="text"><string>Wezwij Dekametrowców!</string></property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="verticalSpacer_2">
-          <property name="orientation"><enum>Qt::Vertical</enum></property>
-          <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
-         </spacer>
-        </item>
-       </layout>
-      </widget>
-
-      <!-- ZAKŁADKA 3: KSIĘGI (Kompresja i Szukanie) -->
-      <widget class="QWidget" name="tab_ksiegi">
-       <attribute name="title">
-        <string>📜 Księgi Królestwa</string>
-       </attribute>
-       <layout class="QVBoxLayout" name="verticalLayout_3">
-        <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_import_eksport">
-          <item>
-           <widget class="QPushButton" name="btn_import_csv">
-            <property name="text"><string>Importuj Bazę Danych (CSV)</string></property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="btn_eksport_csv">
-            <property name="text"><string>Eksportuj Wyniki (CSV)</string></property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <widget class="QPushButton" name="btn_kompresja">
-          <property name="text"><string>Kompresuj Archiwa (Huffman)</string></property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLineEdit" name="input_szukaj">
-          <property name="placeholderText"><string>Wpisz szukaną runę/słowo...</string></property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="btn_szukaj">
-          <property name="text"><string>Przeszukaj Księgi (Rabin-Karp)</string></property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QTextBrowser" name="textBrowser_ksiegi">
-          <property name="html">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p style=&quot;color:#a89f91; font-style:italic;&quot;&gt;Księga jest pusta. Załaduj tekst, aby go przeczytać.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-
-     </widget>
-    </item>
-
    </layout>
   </widget>
-  
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>898</width>
+     <height>30</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menu">
+    <property name="title">
+     <string>Mapa</string>
+    </property>
+   </widget>
+   <addaction name="menu"/>
+  </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
  <resources/>

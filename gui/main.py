@@ -60,6 +60,40 @@ class GlowneOkno(QMainWindow):
         self.ui.setupUi(self)
         self.setWindowTitle("System Logistyki Krasnoludków")
 
+        # === SYSTEM WYBORU DOWOLNYCH PLIKÓW ===
+        base_dir = os.path.dirname(__file__)
+        data_dir = os.path.join(base_dir, "..", "data")
+
+        msg = QMessageBox()
+        msg.setWindowTitle("Wybór danych wejściowych")
+        msg.setText("Czy chcesz wczytać domyślne pliki testowe, czy wybrać własne z dysku?")
+        btn_domyslne = msg.addButton("Użyj domyślnych", QMessageBox.AcceptRole)
+        btn_wlasne = msg.addButton("Wybierz własne z dysku...", QMessageBox.ActionRole)
+        msg.exec()
+
+        kopalnie_path = ""
+        krasnale_path = ""
+
+        if msg.clickedButton() == btn_wlasne:
+            # Otwiera systemowe okno wyboru dowolnego pliku!
+            kopalnie_path, _ = QFileDialog.getOpenFileName(self, "Wybierz plik Kopalni (.csv)", data_dir, "CSV Files (*.csv);;All Files (*)")
+            krasnale_path, _ = QFileDialog.getOpenFileName(self, "Wybierz plik Krasnoludków (.csv)", data_dir, "CSV Files (*.csv);;All Files (*)")
+
+        # Jeśli użytkownik nie wybrał plików lub kliknął "Domyślne", ładujemy pliki testowe
+        if not kopalnie_path or not krasnale_path:
+            kopalnie_path = os.path.join(data_dir, "kopalnie_test.csv")
+            krasnale_path = os.path.join(data_dir, "dane_krasnoludkow_test.csv")
+
+        # Kopiujemy wybrane pliki jako pliki "aktywne" (dzięki temu C++ zawsze wie, co czytać)
+        try:
+            shutil.copy(kopalnie_path, os.path.join(data_dir, "kopalnie_aktywne.csv"))
+            shutil.copy(krasnale_path, os.path.join(data_dir, "dane_krasnoludkow_aktywne.csv"))
+        except Exception as e:
+            print(f"Błąd kopiowania plików aktywnych: {e}")
+        # ======================================
+        
+        self.ui.pushButton_2.setText("Uruchom Algorytm MCMF")
+        
         style_path = os.path.join(os.path.dirname(__file__), "style.qss")
         try:
             with open(style_path, "r", encoding="utf-8") as f:
@@ -72,7 +106,7 @@ class GlowneOkno(QMainWindow):
         self.ui.map.setDragMode(QGraphicsView.ScrollHandDrag)
         self.ui.map.wheelEvent = self.obsluga_zooma
         
-        self.ui.btnUruchomMCMF.clicked.connect(self.uruchom_tylko_mcmf)
+        self.ui.pushButton_2.clicked.connect(self.uruchom_tylko_mcmf)
         self.ui.btnDodajDomek.clicked.connect(self.aktywuj_tryb_dodawania)
         self.ui.odswiezMape.clicked.connect(self.wczytaj_i_rysuj)
 
@@ -80,14 +114,45 @@ class GlowneOkno(QMainWindow):
         self.oryginalny_mousePressEvent = self.ui.map.mousePressEvent
         self.ui.map.mousePressEvent = self.klikniecie_w_mape
 
-        # --- Podpinamy zdefiniowane w pliku UI kontrolki ---
-        self.ui.btn_atak.clicked.connect(self.obsluga_ataku_salwa)
-        self.ui.btn_kompresja.clicked.connect(self.obsluga_kompresji_ksiegi)
-        self.ui.btn_szukaj.clicked.connect(self.obsluga_wyszukiwania_ksiegi)
+        # --- PROBLEM 3: SALWA ---
+        self.spin_od = QSpinBox()
+        self.spin_do = QSpinBox()
+        self.spin_od.setRange(0, 9)
+        self.spin_do.setRange(0, 9)
+        self.spin_od.setValue(1)
+        self.spin_do.setValue(4)
         
-        # Nowe przyciski w zakładce Księgi
-        self.ui.btn_import_csv.clicked.connect(self.import_danych)
-        self.ui.btn_eksport_csv.clicked.connect(self.eksport_danych)
+        # Tworzymy oddzielny, nowy przycisk do Salwy
+        self.btn_atak = QPushButton("Symuluj Atak Jabłkami!")
+        self.btn_atak.setStyleSheet("background-color: #c0392b; color: white; font-weight: bold; padding: 5px;")
+        
+        self.ui.navbar.addWidget(QLabel("Atak od:"), 4, 0)
+        self.ui.navbar.addWidget(self.spin_od, 5, 0)
+        self.ui.navbar.addWidget(QLabel("Atak do:"), 6, 0)
+        self.ui.navbar.addWidget(self.spin_do, 7, 0)
+        self.ui.navbar.addWidget(self.btn_atak, 8, 0) # Wrzucamy go pod spinboxy
+        
+        # Podpinamy go pod funkcję ataku
+        self.btn_atak.clicked.connect(self.obsluga_ataku_salwa)
+        # ------------------------
+        # --- PROBLEM 4: ELEKTRONICZNE KSIĘGI ---
+        self.btn_kompresja = QPushButton("Skompresuj Księgę (Huffman)")
+        self.btn_kompresja.setStyleSheet("background-color: #8e44ad; color: white; font-weight: bold; padding: 5px;")
+        
+        self.input_szukaj = QLineEdit()
+        self.input_szukaj.setPlaceholderText("np. Sniezki, kopalniach")
+        
+        self.btn_szukaj = QPushButton("Szukaj w Księdze (Rabin-Karp)")
+        self.btn_szukaj.setStyleSheet("background-color: #27ae60; color: white; font-weight: bold; padding: 5px;")
+        
+        self.ui.navbar.addWidget(QLabel("---"), 9, 0)
+        self.ui.navbar.addWidget(self.btn_kompresja, 10, 0)
+        self.ui.navbar.addWidget(QLabel("Szukaj frazy:"), 11, 0)
+        self.ui.navbar.addWidget(self.input_szukaj, 12, 0)
+        self.ui.navbar.addWidget(self.btn_szukaj, 13, 0)
+        
+        self.btn_kompresja.clicked.connect(self.obsluga_kompresji_ksiegi)
+        self.btn_szukaj.clicked.connect(self.obsluga_wyszukiwania_ksiegi)
         # --------------------------------------
 
         # Czyścimy stary wynik ataku (jeśli został z poprzedniego uruchomienia aplikacji)
@@ -167,7 +232,7 @@ class GlowneOkno(QMainWindow):
         if os.path.exists(path_akcja): os.remove(path_akcja)
         # ------------------
 
-        lewy, prawy = self.ui.spin_od.value(), self.ui.spin_do.value()
+        lewy, prawy = self.spin_od.value(), self.spin_do.value()
         
         sciezka = os.path.join(os.path.dirname(__file__), "..", "data", "atak.txt")
         with open(sciezka, "w") as f:
@@ -197,7 +262,7 @@ class GlowneOkno(QMainWindow):
         self.uruchom_silnik_cpp()
 
     def obsluga_wyszukiwania_ksiegi(self):  
-        fraza = self.ui.input_szukaj.text().strip()
+        fraza = self.input_szukaj.text().strip()
         if not fraza:
             QMessageBox.warning(self, "Błąd", "Wpisz słowo, którego szukasz w elektronicznych księgach!")
             return
@@ -219,8 +284,8 @@ class GlowneOkno(QMainWindow):
         self.uruchom_silnik_cpp()
 
     def uruchom_silnik_cpp(self):
-        self.ui.btnUruchomMCMF.setText("Przetwarzam...")
-        self.ui.btnUruchomMCMF.setEnabled(False)
+        self.ui.pushButton_2.setText("Przetwarzam...")
+        self.ui.pushButton_2.setEnabled(False)
         QApplication.processEvents()
 
         try:
@@ -254,8 +319,8 @@ class GlowneOkno(QMainWindow):
         except subprocess.CalledProcessError as e:
             QMessageBox.critical(self, "Błąd", f"Algorytm C++ napotkał błąd:\n{e.stderr}")
         finally:
-            self.ui.btnUruchomMCMF.setText("Uruchom Algorytm MCMF")
-            self.ui.btnUruchomMCMF.setEnabled(True)
+            self.ui.pushButton_2.setText("Uruchom Algorytm MCMF")
+            self.ui.pushButton_2.setEnabled(True)
 
     def aktywuj_tryb_dodawania(self):
         self.tryb_dodawania = True
@@ -407,8 +472,8 @@ class GlowneOkno(QMainWindow):
 
             if len(punkty_otoczki) > 0:
                 max_indeks = len(punkty_otoczki) - 1
-                self.ui.spin_od.setRange(0, max_indeks)
-                self.ui.spin_do.setRange(0, max_indeks)
+                self.spin_od.setRange(0, max_indeks)
+                self.spin_do.setRange(0, max_indeks)
 
             if len(punkty_otoczki) > 1:
                 pen_otoczka = QPen(QColor(155, 89, 182), 3)
@@ -491,46 +556,20 @@ class GlowneOkno(QMainWindow):
                         if len(stats) == 3:
                             oryg, skomp, proc = stats
                             msg_text = (
-                                f"<h3 style='color:#d4af37;'>📝 === KOMPRESJA ZAKOŃCZONA ===</h3>"
-                                f"<p>Rozmiar oryginalnego tekstu: <b>{oryg} bitów</b><br>"
-                                f"Rozmiar po kompresji (Drzewo Huffmana): <b>{skomp} bitów</b><br>"
-                                f"Zaoszczędzone miejsce w księgach: <b><span style='color:#2ecc71;'>{float(proc):.2f}%</span></b></p>"
+                                f"📝 === KOMPRESJA ZAKOŃCZONA ===\n"
+                                f"Rozmiar oryginalnego tekstu: {oryg} bitów\n"
+                                f"Rozmiar po kompresji (Drzewo Huffmana): {skomp} bitów\n"
+                                f"Zaoszczędzone miejsce w księgach: {float(proc):.2f}%"
                             )
-                            self.ui.textBrowser_ksiegi.setHtml(msg_text)
-                            QMessageBox.information(self, "Elektroniczne Księgi - Huffman", "Kompresja zakończona sukcesem!")
+                            QMessageBox.information(self, "Elektroniczne Księgi - Huffman", msg_text)
                             
                     elif akcja == "SZUKAJ":
                         liczba_znalezien = f.readline().strip()
                         pozycje = f.readline().strip()
-                        
-                        ksiega_path = os.path.join(base_dir, "..", "data", "ksiega.txt")
-                        wzorzec_path = os.path.join(base_dir, "..", "data", "wzorzec.txt")
-                        pelny_tekst = ""
-                        try:
-                            with open(ksiega_path, "r") as kf:
-                                pelny_tekst = kf.read()
-                        except:
-                            pass
-                            
-                        wzorzec = ""
-                        try:
-                            with open(wzorzec_path, "r") as wf:
-                                wzorzec = wf.read().strip()
-                        except:
-                            pass
-
-                        if pelny_tekst and wzorzec and int(liczba_znalezien) > 0:
-                            # Highlight found word
-                            pelny_tekst = pelny_tekst.replace(wzorzec, f"<span style='background-color: #f1c40f; color: #2c3e50; font-weight: bold; padding: 2px;'>{wzorzec}</span>")
-                            
-                        msg_text = f"<h3 style='color:#d4af37;'>🔍 WYNIKI (RABIN-KARP)</h3>"
-                        msg_text += f"<p>Znaleziono <b>{liczba_znalezien}</b> pasujących fragmentów tekstu.</p>"
+                        msg_text = f"🔍 === WYSZUKIWANIE (RABIN-KARP) ===\nZnaleziono {liczba_znalezien} pasujących fragmentów tekstu.\n"
                         if int(liczba_znalezien) > 0:
-                            msg_text += f"<p>Pozycje: {pozycje}</p>"
-                            
-                        msg_text += f"<hr><p style='font-size: 16px; line-height: 1.5; color: #ecf0f1;'>{pelny_tekst}</p>"
-                            
-                        self.ui.textBrowser_ksiegi.setHtml(msg_text)
+                            msg_text += f"\nPozycje literowe wzorca w pliku: {pozycje}"
+                        QMessageBox.information(self, "Elektroniczne Księgi - Rabin-Karp", msg_text)
                 
                 # Sprzątamy pliki komunikacyjne po wyświetleniu okienka
                 os.remove(path_wyniki_ksiegi)
