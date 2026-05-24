@@ -199,16 +199,29 @@ class GlowneOkno(QMainWindow):
         self.uruchom_silnik_cpp()
 
     def uruchom_silnik_cpp(self):
-        self.ui.btnUruchomMCMF.setText("Przetwarzam...")
-        self.ui.btnUruchomMCMF.setEnabled(False)
+        self.ui.pushButton_2.setText("Przetwarzam...")
+        self.ui.pushButton_2.setEnabled(False)
         QApplication.processEvents()
 
         try:
             base_dir = os.path.dirname(__file__)
             project_dir = os.path.join(base_dir, "..")
             
+            # Zamiast "make run", bezpośrednio uderzamy do skompilowanego pliku!
+            # sys.platform sprawdza, czy to Windows czy inny system, by dobrać końcówkę .exe
+            if sys.platform == "win32":
+                exe_path = os.path.join(project_dir, "build", "symulacja_krasnoludkow.exe")
+            else:
+                exe_path = os.path.join(project_dir, "build", "symulacja_krasnoludkow")
+            
+            # Zabezpieczenie: jeśli ktoś usunął folder build i plik nie istnieje
+            if not os.path.exists(exe_path):
+                QMessageBox.warning(self, "Brak silnika!", "Najpierw musisz jednorazowo skompilować projekt wpisując 'make' w terminalu.")
+                return
+
+            # Odpalamy czysty plik wykonywalny, co działa ułamek sekundy!
             subprocess.run(
-                ["make", "run"], 
+                [exe_path], 
                 cwd=project_dir, 
                 check=True, 
                 capture_output=True, 
@@ -216,15 +229,13 @@ class GlowneOkno(QMainWindow):
             )
             
             self.wczytaj_i_rysuj()
-            self.ui.statusbar.showMessage("Obliczenia zakończone sukcesem!", 4000)
+            self.ui.statusbar.showMessage("Błyskawiczne obliczenia zakończone!", 4000)
 
         except subprocess.CalledProcessError as e:
             QMessageBox.critical(self, "Błąd", f"Algorytm C++ napotkał błąd:\n{e.stderr}")
-        except FileNotFoundError:
-            QMessageBox.critical(self, "Błąd", "Nie znaleziono polecenia 'make'.")
         finally:
-            self.ui.btnUruchomMCMF.setText("Oblicz Trasy Wydobycia (MCMF)")
-            self.ui.btnUruchomMCMF.setEnabled(True)
+            self.ui.pushButton_2.setText("Uruchom Algorytm MCMF")
+            self.ui.pushButton_2.setEnabled(True)
 
     def aktywuj_tryb_dodawania(self):
         self.tryb_dodawania = True

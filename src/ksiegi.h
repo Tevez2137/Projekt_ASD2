@@ -37,6 +37,10 @@ public:
     // Moduł Kompresji (Huffman)
     void budujDrzewoHuffmana(const std::string& tekst);
     std::string kompresuj(const std::string& tekst);
+    std::string dekompresuj(const std::string& skompresowany);
+
+    void zapiszArchiwumNaDysk(const std::string& sciezka, const std::string& skompresowany);
+    std::string wczytajArchiwumZDysku(const std::string& sciezka);
     
     // Moduł Wyszukiwania (Rabin-Karp)
     std::vector<int> szukajRabinKarp(const std::string& tekst, const std::string& wzorzec);
