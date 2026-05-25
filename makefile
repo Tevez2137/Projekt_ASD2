@@ -36,8 +36,8 @@ $(BUILD_DIR)/$(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $(OBJS)
 
 # Kompilacja plików .cpp do .o w folderze build
-build/src/%.o: src/%.cpp
-	@mkdir -p build/src
+$(BUILD_DIR)/%.o: %.cpp
+	@$(MKDIR_CMD)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # Odpalanie
