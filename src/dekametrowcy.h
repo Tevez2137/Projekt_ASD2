@@ -10,7 +10,7 @@ struct Dekametrowiec {
     int glosnosc;
 };
 
-// Struktura węzła (przechowuje wartość maksimum oraz kto ją wydał)
+// Struktura węzła
 struct WezelDrzewa {
     int maxGlosnosc;
     int krasnoludekID;

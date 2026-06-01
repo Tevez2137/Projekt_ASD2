@@ -6,15 +6,10 @@
 #include <string>
 
 using namespace std;
-
-//klasa z krasnoludkami / dane , podstawowe funkcje do wypisywania danych poszczegolnego ludziczka 
-//kazdy krasnoludek ma swoj domek ;P 
-
-
-    struct Domek{
-        int x;
-        int y;
-    };
+struct Domek{
+    int x;
+    int y;
+};
 
 
 class Krasnoludek{

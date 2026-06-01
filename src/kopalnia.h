@@ -1,6 +1,3 @@
-// co potrzebuje kopalnia: gdzie jest , co przyjmuje , jaki surowiec , ilu pracownikow
-// otoczka wypukla trasy patrolu
-
 #ifndef KOPALNIA_H
 #define KOPALNIA_H
 

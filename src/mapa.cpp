@@ -8,7 +8,7 @@
 #include <fstream>
 #include <string>
 #include <sstream>
-#include <cmath> // Wymagane dla std::hypot i std::round
+#include <cmath> 
 #include <vector>
 #include "dekametrowcy.h"
 
@@ -106,7 +106,7 @@ void Graph::init()
         cout << "Nie mozna otworzyc pliku data/dane_krasnoludkow.csv!" << endl;
     }
 
-    // C) Ustawiamy rozmiar grafu po wczytaniu danych
+    // Ustawiamy rozmiar grafu po wczytaniu danych
     int N = this->krasnoludki.size();
     int M = this->kopalnie.size();
 
@@ -116,9 +116,6 @@ void Graph::init()
     this->zrodlo = 0;
     this->ujscie = N + M + 1;
 
-    // ==================================================
-    // MAGIA AUTOUZUPELNIANIA (odpalanie reszty procesu)
-    // ==================================================
     cout << "Budowanie sieci polaczen (z filtrowaniem surowcow)..." << endl;
     this->buildGraph();
 
@@ -134,7 +131,7 @@ void Graph::init()
 }
 
 // ==========================================
-// 2. BUDOWANIE INTELIGENTNEGO GRAFU
+// BUDOWANIE INTELIGENTNEGO GRAFU
 // ==========================================
 void Graph::buildGraph()
 {
@@ -225,9 +222,9 @@ void Graph::saveResults(const std::string& filename) {
     cout << "Gotowe! Zaktualizowano baze krasnoludkow w: " << filename << endl;
 }
 
-// ==========================================
-// 4. FUNKCJE GRAFOWE (ORYGINALNE)
-// ==========================================
+// ===============
+// FUNKCJE GRAFOWE
+// ===============
 Graph::Graph(int v) : vertices(v)
 {
     adj.resize(vertices);
@@ -239,9 +236,9 @@ void Graph::addEdge(int u, int v, int cap, int cost)
     adj[v].push_back({u, 0, 0, -cost, (int)adj[u].size() - 1});
 }
 
-// ==========================================================
-// 5. FAZA 1: MAKSYMALNY PRZEPŁYW (Edmonds-Karp)
-// ==========================================================
+// ===================================
+//  MAKSYMALNY PRZEPŁYW (Edmonds-Karp)
+// ===================================
 int Graph::findMaxFlow(int s, int t)
 {
     int flow = 0;
@@ -295,22 +292,20 @@ int Graph::findMaxFlow(int s, int t)
     return flow;
 }
 
-// ==========================================================
-// 6. FAZA 2: USUWANIE CYKLI O UJEMNYM KOSZCIE (Zoptymalizowane)
-// ==========================================================
+// =================================
+//  USUWANIE CYKLI O UJEMNYM KOSZCIE
+// =================================
 void Graph::minCostMaxFlow(int start, int end)
 {
     int totalFlow = findMaxFlow(start, end);
     cout << "-> Faza 1: Znaleziono maksymalny przeplyw: " << totalFlow << " krasnoludkow." << endl;
 
-    // OPTYMALIZACJA PAMIĘCI: Deklarujemy wektory TYLKO RAZ poza pętlą
     vector<int> dist(vertices);
     vector<int> parent(vertices);
     vector<int> edge_to_parent(vertices);
 
     while (true)
     {
-        // Zamiast tworzyć na nowo, po prostu je "zerujemy"
         fill(dist.begin(), dist.end(), 0);
         fill(parent.begin(), parent.end(), -1);
         fill(edge_to_parent.begin(), edge_to_parent.end(), -1);
@@ -381,9 +376,9 @@ void Graph::minCostMaxFlow(int start, int end)
     cout << "-> Laczny najmniejszy dystans krasnoludkow: " << totalCost << " km" << endl;
 }
 
-// ==========================================================
-// 7. Budowanie otoczki wypukłej (dla wizualizacji trasy Księcia)
-// ==========================================================
+// ==========================
+// Budowanie otoczki wypukłej
+// ==========================
 
 void Graph::obliczTraseKsiecia()
 {
@@ -413,7 +408,6 @@ void Graph::obliczTraseKsiecia()
         return;
     }
 
-    // 2. MAGIA: Wywołujemy nasz nowy moduł!
     vector<Wspolrzedne> otoczka = zbudujOtoczke(punkty);
     double dystans = obliczObwod(otoczka);
 
@@ -421,7 +415,7 @@ void Graph::obliczTraseKsiecia()
     cout << "PROBLEM 2: Trasa patrolowa Ksiecia: " << round(dystans) << " km\n";
     cout << "---------------------------------------------------\n";
 
-    // --- NOWY KOD: Zapisywanie otoczki dla Pythona ---
+    // --- Zapisywanie otoczki dla Pythona ---
     std::ofstream plikOtoczka("data/otoczka.txt");
     if (plikOtoczka.is_open())
     {
@@ -438,12 +432,12 @@ void Graph::obliczTraseKsiecia()
 }
 
 // ==========================================================
-// 8. PROBLEM 3: Salwa Dekametrowcow (Drzewo Przedzialowe)
+// Salwa Dekametrowcow
 // ==========================================================
 void Graph::obliczSalwe() {
     int lewy_indeks = -1, prawy_indeks = -1;
     
-    // 1. ODCZYT ZAPYTANIA OD PYTHONA
+    // ODCZYT ZAPYTANIA OD PYTHONA
     std::ifstream plikAtak("data/atak.txt");
     if (plikAtak.is_open()) {
         plikAtak >> lewy_indeks >> prawy_indeks;
@@ -453,7 +447,7 @@ void Graph::obliczSalwe() {
         return; 
     }
 
-    // 2. DYNAMICZNE TWORZENIE ODDZIAŁU NA BAZIE OTOCZKI WYPUKŁEJ
+    // DYNAMICZNE TWORZENIE ODDZIAŁU NA BAZIE OTOCZKI WYPUKŁEJ
     vector<Dekametrowiec> oddzial;
     std::ifstream plikOtoczka("data/otoczka.txt");
     
@@ -503,7 +497,7 @@ void Graph::obliczSalwe() {
         dowodcaID = (glosnosc1 > glosnosc2) ? id1 : id2;
     }
     
-    // 4. ZAPISYWANIE WYNIKU DLA PYTHONA
+    // ZAPISYWANIE WYNIKU DLA PYTHONA
     std::ofstream plikSalwa("data/wyniki_salwa.txt");
     if (plikSalwa.is_open()) {
         plikSalwa << lewy_indeks << " " << prawy_indeks << " " << dowodcaID << "\n";
@@ -511,7 +505,7 @@ void Graph::obliczSalwe() {
     }
 }
 void Graph::obliczKsiegi() {
-    // 1. Odczyt akcji z GUI (KOMPRESJA czy SZUKAJ)
+    // Odczyt akcji z GUI
     std::ifstream plikAkcji("data/akcja_ksiegi.txt");
     std::string akcja = "";
     if (plikAkcji.is_open()) {
@@ -521,7 +515,7 @@ void Graph::obliczKsiegi() {
     // Jeśli nie wybrano akcji dla ksiąg, po prostu wychodzimy
     if (akcja.empty()) return;
 
-    // 2. Odczyt tekstu kroniki królestwa
+    // Odczyt tekstu kroniki królestwa
     std::ifstream plikKsiegi("data/ksiega.txt");
     std::string tekst((std::istreambuf_iterator<char>(plikKsiegi)), std::istreambuf_iterator<char>());
     plikKsiegi.close();
@@ -537,7 +531,7 @@ void Graph::obliczKsiegi() {
     ElektroniczneKsiegi ek;
     std::ofstream plikWynikow("data/wyniki_ksiegi.txt");
 
-    // 3. Wykonanie odpowiedniego algorytmu na żądanie
+    // Wykonanie odpowiedniego algorytmu na żądanie
     if (akcja == "KOMPRESJA") {
         ek.budujDrzewoHuffmana(tekst);
         std::string skompresowany = ek.kompresuj(tekst);

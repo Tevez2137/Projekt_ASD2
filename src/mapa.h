@@ -2,10 +2,9 @@
 #define MAPA_H
 
 #include <vector>
-#include <utility> // dla std::pair
+#include <utility>
 #include <string>
 
-// Koniecznie dołączamy nagłówki naszych obiektów!
 #include "kopalnia.h"
 #include "krasnoludek.h"
 #include "ksiegi.h"
@@ -23,9 +22,6 @@ class Graph {
 private:
     int vertices;
     std::vector<std::vector<Edge>> adj;
-
-    // Prywatna funkcja pomocnicza do szukania najtańszej ścieżki
-    bool spfa(int start, int end, std::vector<int>& dist, std::vector<int>& parent, std::vector<int>& parentEdge, std::vector<bool>& inQueue);
 
 public:
     // Wektory przechowujące wczytane dane

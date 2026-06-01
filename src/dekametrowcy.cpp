@@ -1,6 +1,6 @@
 #include "dekametrowcy.h"
 
-// Element neutralny dla funkcji MAX (wg wykładu to -nieskończoność)
+// Element neutralny dla funkcji MAX
 const int MINUS_NIESKONCZONOSC = -1; 
 const WezelDrzewa ELEMENT_NEUTRALNY = {MINUS_NIESKONCZONOSC, -1};
 
