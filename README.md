@@ -50,7 +50,7 @@ Cała logika i silnik C++ są zautomatyzowane. Aby uruchomić projekt, wystarczy
 
 * `src/` – Pliki z kodem źródłowym C++ implementujące główne algorytmy.
 * `gui/` – Skrypty Pythona obsługujące interfejs i komunikację z backendem.
-* `data/` – Baza danych królestwa (`.csv`), skrypty generujące testy oraz pliki wynikowe.
+* `data/` – Baza danych królestwa (`.bin`), skrypty generujące testy oraz pliki wynikowe.
 * `docs/` – Dokumentacja, testy wydajnościowe i opis poprawności algorytmów.
 
 ---
