@@ -15,8 +15,6 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout">
-    
-    <!-- LEWA STRONA: MAPA -->
     <item>
      <widget class="QGraphicsView" name="map">
       <property name="sizePolicy">
@@ -27,8 +25,6 @@
       </property>
      </widget>
     </item>
-
-    <!-- PRAWA STRONA: ZAKŁADKI (TABS) -->
     <item>
      <widget class="QTabWidget" name="tabWidget">
       <property name="sizePolicy">
@@ -38,10 +34,8 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>2</number>
       </property>
-
-      <!-- ZAKŁADKA 1: LOGISTYKA (Wydobycie i Kopalnie) -->
       <widget class="QWidget" name="tab_logistyka">
        <attribute name="title">
         <string>⛏️ Logistyka</string>
@@ -56,29 +50,40 @@
         </item>
         <item>
          <widget class="QPushButton" name="btnDodajDomek">
-          <property name="text"><string>Wznieś Nowy Domek</string></property>
+          <property name="text">
+           <string>Wznieś Nowy Domek</string>
+          </property>
          </widget>
         </item>
         <item>
          <widget class="QPushButton" name="odswiezMape">
-          <property name="text"><string>Zbadaj Teren (Odśwież)</string></property>
+          <property name="text">
+           <string>Zbadaj Teren (Odśwież)</string>
+          </property>
          </widget>
         </item>
         <item>
          <widget class="QPushButton" name="btnUruchomMCMF">
-          <property name="text"><string>Oblicz Trasy Wydobycia (MCMF)</string></property>
+          <property name="text">
+           <string>Oblicz Trasy Wydobycia (MCMF)</string>
+          </property>
          </widget>
         </item>
         <item>
          <spacer name="verticalSpacer_1">
-          <property name="orientation"><enum>Qt::Vertical</enum></property>
-          <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
+          <property name="orientation">
+           <enum>Qt::Orientation::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
          </spacer>
         </item>
        </layout>
       </widget>
-
-      <!-- ZAKŁADKA 2: OBRONA GRANIC (Salwa i Otoczka) -->
       <widget class="QWidget" name="tab_obrona">
        <attribute name="title">
         <string>🏹 Obrona Granic</string>
@@ -93,7 +98,9 @@
         </item>
         <item>
          <widget class="QLabel" name="label_od">
-          <property name="text"><string>Początek odcinka ataku:</string></property>
+          <property name="text">
+           <string>Początek odcinka ataku:</string>
+          </property>
          </widget>
         </item>
         <item>
@@ -101,7 +108,9 @@
         </item>
         <item>
          <widget class="QLabel" name="label_do">
-          <property name="text"><string>Koniec odcinka ataku:</string></property>
+          <property name="text">
+           <string>Koniec odcinka ataku:</string>
+          </property>
          </widget>
         </item>
         <item>
@@ -109,55 +118,79 @@
         </item>
         <item>
          <widget class="QPushButton" name="btn_atak">
-          <property name="text"><string>Wezwij Dekametrowców!</string></property>
+          <property name="text">
+           <string>Wezwij Dekametrowców!</string>
+          </property>
          </widget>
         </item>
         <item>
          <spacer name="verticalSpacer_2">
-          <property name="orientation"><enum>Qt::Vertical</enum></property>
-          <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
+          <property name="orientation">
+           <enum>Qt::Orientation::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
          </spacer>
         </item>
        </layout>
       </widget>
-
-      <!-- ZAKŁADKA 3: KSIĘGI (Kompresja i Szukanie) -->
       <widget class="QWidget" name="tab_ksiegi">
        <attribute name="title">
         <string>📜 Księgi Królestwa</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_3">
         <item>
-         <widget class="QPushButton" name="btn_kompresja">
-          <property name="text"><string>Kompresuj Archiwa (Huffman)</string></property>
+         <widget class="QPushButton" name="btn_import">
+          <property name="text">
+           <string>Importuj Dane</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btn_eksport">
+          <property name="text">
+           <string>Eksportuj Dane</string>
+          </property>
          </widget>
         </item>
         <item>
          <widget class="QLineEdit" name="input_szukaj">
-          <property name="placeholderText"><string>Wpisz szukaną runę/słowo...</string></property>
+          <property name="placeholderText">
+           <string>Wpisz szukaną runę/słowo...</string>
+          </property>
          </widget>
         </item>
         <item>
          <widget class="QPushButton" name="btn_szukaj">
-          <property name="text"><string>Przeszukaj Księgi (Rabin-Karp)</string></property>
+          <property name="text">
+           <string>Przeszukaj Księgi (Rabin-Karp)</string>
+          </property>
          </widget>
         </item>
         <item>
          <widget class="QTextBrowser" name="textBrowser_ksiegi">
           <property name="html">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p style=&quot;color:#a89f91; font-style:italic;&quot;&gt;Księga jest pusta. Załaduj tekst, aby go przeczytać.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+hr { height: 1px; border-width: 0; }
+li.unchecked::marker { content: &quot;\2610&quot;; }
+li.checked::marker { content: &quot;\2612&quot;; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'.AppleSystemUIFont'; font-size:13pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-style:italic; color:#a89f91;&quot;&gt;Księga jest pusta. Załaduj tekst, aby go przeczytać.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
          </widget>
         </item>
        </layout>
       </widget>
-
      </widget>
     </item>
-
    </layout>
   </widget>
-  
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
  <resources/>

@@ -22,6 +22,7 @@ class Graph {
 private:
     int vertices;
     std::vector<std::vector<Edge>> adj;
+    std::vector<Wspolrzedne> aktualnaOtoczka;
 
 public:
     // Wektory przechowujące wczytane dane
@@ -42,7 +43,6 @@ public:
     void saveResults(const std::string& filename);   // Zapisuje wyniki do pliku txt
     
     void obliczTraseKsiecia();
-    void obliczSalwe();
     void obliczKsiegi();
 };
 

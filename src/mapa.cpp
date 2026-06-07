@@ -11,184 +11,81 @@
 #include <cmath> 
 #include <vector>
 #include "dekametrowcy.h"
+#include "ksiegi.h"
 
 using namespace std;
 
 const int INF = 1e9;
 
-// ==========================================
-// 1. GŁÓWNY SILNIK (WCZYTYWANIE + ODPALANIE)
-// ==========================================
 void Graph::init()
 {
-    // A) Odczyt kopalni
-    ifstream plikKopalnie("data/kopalnie_aktywne.csv");
-    if (plikKopalnie.is_open())
-    {
-        string linia;
-        getline(plikKopalnie, linia); // Pomijamy nagłówek
+    ElektroniczneKsiegi ek;
 
-        while (getline(plikKopalnie, linia))
-        {
-            if (linia.empty())
-                continue;
-            stringstream ss(linia);
-            string temp;
+    string skompKop = ek.wczytajArchiwumZDysku("data/kopalnie.bin");
+    string csvKop = ek.dekompresuj(skompKop);
 
-            int iloscMiejsc;
-            Wspolrzedne wspolrzedne;
-            string surowiec, ID;
-
-            getline(ss, temp, ',');
-            ID = temp;
-            getline(ss, temp, ',');
-            wspolrzedne.x = stoi(temp);
-            getline(ss, temp, ',');
-            wspolrzedne.y = stoi(temp);
-            getline(ss, surowiec, ',');
-            getline(ss, temp, ',');
-            iloscMiejsc = stoi(temp);
-
-            this->kopalnie.push_back(Kopalnia(ID, wspolrzedne, surowiec, iloscMiejsc));
-        }
-        plikKopalnie.close();
-    }
-    else
-    {
-        cout << "Nie mozna otworzyc pliku data/kopalnie.csv!" << endl;
+    if (csvKop.empty()) {
+        cout << "Blad: Baza danych kopalnie.bin jest pusta. Zaimportuj dane przez GUI!" << endl;
+        return;
     }
 
-    // B) Odczyt krasnoludków
-    ifstream plikKrasnoludki("data/dane_krasnoludkow_aktywne.csv");
-    if (plikKrasnoludki.is_open())
-    {
-        string linia;
-        getline(plikKrasnoludki, linia); // Pomijamy nagłówek
-
-        while (getline(plikKrasnoludki, linia))
-        {
-            if (linia.empty())
-                continue;
-
-            string ID, ID_kopalni;
-            vector<string> mineraly;
-            Domek domek;
-            stringstream ss(linia);
-            string temp;
-
-            getline(ss, temp, ',');
-            ID = temp;
-            getline(ss, temp, ',');
-            ID_kopalni = temp;
-
-            // Czytamy Minerały i rozbijamy po średniku
-            string wszystkieMineraly;
-            getline(ss, wszystkieMineraly, ',');
-            stringstream ssMineraly(wszystkieMineraly);
-            string pojedynczyMineral;
-            while (getline(ssMineraly, pojedynczyMineral, ';'))
-            {
-                mineraly.push_back(pojedynczyMineral);
-            }
-
-            // Czytamy współrzędne domku
-            getline(ss, temp, ',');
-            domek.x = stoi(temp);
-            getline(ss, temp, ',');
-            domek.y = stoi(temp);
-
-            this->krasnoludki.push_back(Krasnoludek(ID, ID_kopalni, mineraly, domek));
-        }
-        plikKrasnoludki.close();
-    }
-    else
-    {
-        cout << "Nie mozna otworzyc pliku data/dane_krasnoludkow.csv!" << endl;
+    stringstream ssKop(csvKop);
+    string linia; getline(ssKop, linia);
+    while (getline(ssKop, linia)) {
+        if (linia.empty()) continue;
+        stringstream ss(linia); string t, sur, id; int m; Wspolrzedne w;
+        getline(ss, t, ','); id = t;
+        getline(ss, t, ','); w.x = stoi(t);
+        getline(ss, t, ','); w.y = stoi(t);
+        getline(ss, sur, ',');
+        getline(ss, t, ','); m = stoi(t);
+        this->kopalnie.push_back(Kopalnia(id, w, sur, m));
     }
 
-    // Ustawiamy rozmiar grafu po wczytaniu danych
+    string skompKras = ek.wczytajArchiwumZDysku("data/dane_krasnoludkow.bin");
+    string csvKras = ek.dekompresuj(skompKras);
+
+    if (csvKras.empty()) {
+        cout << "Blad: Baza danych dane_krasnoludkow.bin jest pusta. Zaimportuj dane przez GUI!" << endl;
+        return;
+    }
+
+    stringstream ssKras(csvKras);
+    getline(ssKras, linia);
+    while (getline(ssKras, linia)) {
+        if (linia.empty()) continue;
+        string id, idKop, t, mAll, m1; Domek d; vector<string> min;
+        stringstream ss(linia);
+        getline(ss, t, ','); id = t;
+        getline(ss, t, ','); idKop = t;
+        getline(ss, mAll, ','); stringstream ssMin(mAll);
+        while (getline(ssMin, m1, ';')) min.push_back(m1);
+        getline(ss, t, ','); d.x = stoi(t);
+        getline(ss, t, ','); d.y = stoi(t);
+        this->krasnoludki.push_back(Krasnoludek(id, idKop, min, d));
+    }
+
     int N = this->krasnoludki.size();
     int M = this->kopalnie.size();
-
-    this->vertices = N + M + 2; // +2 bo Zrodlo(0) i Ujscie(N+M+1)
+    this->vertices = N + M + 2; 
     this->adj.resize(this->vertices);
-
     this->zrodlo = 0;
     this->ujscie = N + M + 1;
 
-    cout << "Budowanie sieci polaczen (z filtrowaniem surowcow)..." << endl;
+    cout << "Budowanie sieci polaczen z bazy binarnej..." << endl;
     this->buildGraph();
-
-    cout << "Obliczanie optymalnego przydzialu (Cycle Canceling)..." << endl;
     this->minCostMaxFlow(this->zrodlo, this->ujscie);
-
     this->obliczTraseKsiecia();
-    this->obliczSalwe();
+    // USUNIĘTO OBLICZANIE SALWY Z PLIKÓW
     this->obliczKsiegi();
     
-    cout << "Zapisywanie wynikow dla Pythona..." << endl;
-    this->saveResults("data/dane_krasnoludkow.csv");
+    this->saveResults(""); 
 }
 
-// ==========================================
-// BUDOWANIE INTELIGENTNEGO GRAFU
-// ==========================================
-void Graph::buildGraph()
-{
+void Graph::saveResults(const std::string& /*filename*/) {
     int N = this->krasnoludki.size();
-    int M = this->kopalnie.size();
+    for (int i = 0; i < N; ++i) this->krasnoludki[i].ID_kopalni = "0"; 
 
-    // A) Źródło -> Krasnoludki (pojemność 1, koszt 0)
-    for (int i = 0; i < N; ++i)
-    {
-        addEdge(this->zrodlo, i + 1, 1, 0);
-    }
-
-    // B) Krasnoludki -> Kopalnie (FILTROWANIE SUROWCÓW + KOSZT JAKO DYSTANS)
-    for (int i = 0; i < N; ++i)
-    {
-        for (int j = 0; j < M; ++j)
-        {
-            std::string surowiecKopalni = this->kopalnie[j].surowiec;
-
-            // Sprawdzamy czy krasnoludek lubi ten surowiec
-            auto it = std::find(
-                this->krasnoludki[i].mineraly.begin(),
-                this->krasnoludki[i].mineraly.end(),
-                surowiecKopalni);
-
-            if (it != this->krasnoludki[i].mineraly.end())
-            {
-                // Liczymy dystans
-                double dx = this->krasnoludki[i].domek.x - this->kopalnie[j].wspolrzedne.x;
-                double dy = this->krasnoludki[i].domek.y - this->kopalnie[j].wspolrzedne.y;
-                int dystans = std::round(std::hypot(dx, dy));
-
-                // Dodajemy krawędź
-                addEdge(i + 1, N + j + 1, 1, dystans);
-            }
-        }
-    }
-
-    // C) Kopalnie -> Ujście (pojemność = ilość miejsc, koszt 0)
-    for (int j = 0; j < M; ++j)
-    {
-        addEdge(N + j + 1, this->ujscie, this->kopalnie[j].iloscMiejsc, 0);
-    }
-}
-
-// ==========================================
-// 3. GENEROWANIE WYNIKÓW DLA GUI
-// ==========================================
-void Graph::saveResults(const std::string& filename) {
-    int N = this->krasnoludki.size();
-
-    // 1. Zresetuj obecne przydziały (na wypadek utraty miejsca w kopalni po re-kalkulacji)
-    for (int i = 0; i < N; ++i) {
-        this->krasnoludki[i].ID_kopalni = "0"; 
-    }
-
-    // 2. Odczytaj nowe przydziały z wyliczonego przepływu i zaktualizuj obiekty
     for (int u = 1; u <= N; u++) {
         for (const auto& e : adj[u]) {
             if (e.flow > 0 && e.to != this->zrodlo) {
@@ -198,329 +95,189 @@ void Graph::saveResults(const std::string& filename) {
         }
     }
 
-    // 3. Nadpisz główny plik CSV zaktualizowanymi danymi
-    std::ofstream plik(filename);
-    if (!plik.is_open()) {
-        cout << "Blad przy nadpisywaniu pliku: " << filename << endl;
-        return;
-    }
-
-    plik << "ID,ID_kopalni,Mineraly,X,Y\n";
+    std::stringstream ssOut;
+    ssOut << "ID,ID_kopalni,Mineraly,X,Y\n";
     for (int i = 0; i < N; ++i) {
-        plik << this->krasnoludki[i].ID << ","
-             << this->krasnoludki[i].ID_kopalni << ",";
-        
-        // Złączenie minerałów średnikiem z powrotem do formatu CSV
+        ssOut << this->krasnoludki[i].ID << "," << this->krasnoludki[i].ID_kopalni << ",";
         for (size_t j = 0; j < this->krasnoludki[i].mineraly.size(); ++j) {
-            plik << this->krasnoludki[i].mineraly[j];
-            if (j < this->krasnoludki[i].mineraly.size() - 1) plik << ";";
+            ssOut << this->krasnoludki[i].mineraly[j];
+            if (j < this->krasnoludki[i].mineraly.size() - 1) ssOut << ";";
         }
-        
-        plik << "," << this->krasnoludki[i].domek.x << "," << this->krasnoludki[i].domek.y << "\n";
+        ssOut << "," << this->krasnoludki[i].domek.x << "," << this->krasnoludki[i].domek.y << "\n";
     }
-    plik.close();
-    cout << "Gotowe! Zaktualizowano baze krasnoludkow w: " << filename << endl;
+    
+    ElektroniczneKsiegi ek;
+    string csvWynik = ssOut.str();
+    ek.budujDrzewoHuffmana(csvWynik);
+    
+    ek.zapiszArchiwumNaDysk("data/dane_krasnoludkow.bin", ek.kompresuj(csvWynik));
+    cout << "Gotowe! Zaktualizowano binarne archiwum krasnoludkow." << endl;
 }
 
-// ===============
-// FUNKCJE GRAFOWE
-// ===============
-Graph::Graph(int v) : vertices(v)
+void Graph::buildGraph()
 {
-    adj.resize(vertices);
+    int N = this->krasnoludki.size();
+    int M = this->kopalnie.size();
+
+    for (int i = 0; i < N; ++i)
+        addEdge(this->zrodlo, i + 1, 1, 0);
+
+    for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < M; ++j) {
+            std::string surowiecKopalni = this->kopalnie[j].surowiec;
+            auto it = std::find(this->krasnoludki[i].mineraly.begin(), this->krasnoludki[i].mineraly.end(), surowiecKopalni);
+
+            if (it != this->krasnoludki[i].mineraly.end()) {
+                double dx = this->krasnoludki[i].domek.x - this->kopalnie[j].wspolrzedne.x;
+                double dy = this->krasnoludki[i].domek.y - this->kopalnie[j].wspolrzedne.y;
+                int dystans = std::round(std::hypot(dx, dy));
+                addEdge(i + 1, N + j + 1, 1, dystans);
+            }
+        }
+    }
+
+    for (int j = 0; j < M; ++j)
+        addEdge(N + j + 1, this->ujscie, this->kopalnie[j].iloscMiejsc, 0);
 }
 
-void Graph::addEdge(int u, int v, int cap, int cost)
-{
+Graph::Graph(int v) : vertices(v) { adj.resize(vertices); }
+
+void Graph::addEdge(int u, int v, int cap, int cost) {
     adj[u].push_back({v, cap, 0, cost, (int)adj[v].size()});
     adj[v].push_back({u, 0, 0, -cost, (int)adj[u].size() - 1});
 }
 
-// ===================================
-//  MAKSYMALNY PRZEPŁYW (Edmonds-Karp)
-// ===================================
-int Graph::findMaxFlow(int s, int t)
-{
+int Graph::findMaxFlow(int s, int t) {
     int flow = 0;
     vector<int> parent(vertices);
     vector<int> edge_from(vertices);
 
-    while (true)
-    {
+    while (true) {
         fill(parent.begin(), parent.end(), -1);
-        queue<int> q;
-        q.push(s);
-        parent[s] = s;
+        queue<int> q; q.push(s); parent[s] = s;
 
-        while (!q.empty())
-        {
-            int u = q.front();
-            q.pop();
-            for (int i = 0; i < (int)adj[u].size(); i++)
-            {
+        while (!q.empty()) {
+            int u = q.front(); q.pop();
+            for (int i = 0; i < (int)adj[u].size(); i++) {
                 Edge &e = adj[u][i];
-                if (parent[e.to] == -1 && e.capacity > e.flow)
-                {
-                    parent[e.to] = u;
-                    edge_from[e.to] = i;
-                    q.push(e.to);
+                if (parent[e.to] == -1 && e.capacity > e.flow) {
+                    parent[e.to] = u; edge_from[e.to] = i; q.push(e.to);
                 }
             }
         }
-
-        if (parent[t] == -1)
-            break;
+        if (parent[t] == -1) break;
 
         int push = INF;
-        for (int v = t; v != s; v = parent[v])
-        {
-            int u = parent[v];
-            int idx = edge_from[v];
+        for (int v = t; v != s; v = parent[v]) {
+            int u = parent[v]; int idx = edge_from[v];
             push = min(push, adj[u][idx].capacity - adj[u][idx].flow);
         }
 
-        for (int v = t; v != s; v = parent[v])
-        {
-            int u = parent[v];
-            int idx = edge_from[v];
-            int rev_idx = adj[u][idx].rev_idx;
-            adj[u][idx].flow += push;
-            adj[v][rev_idx].flow -= push;
+        for (int v = t; v != s; v = parent[v]) {
+            int u = parent[v]; int idx = edge_from[v]; int rev_idx = adj[u][idx].rev_idx;
+            adj[u][idx].flow += push; adj[v][rev_idx].flow -= push;
         }
         flow += push;
     }
     return flow;
 }
 
-// =================================
-//  USUWANIE CYKLI O UJEMNYM KOSZCIE
-// =================================
-void Graph::minCostMaxFlow(int start, int end)
-{
+void Graph::minCostMaxFlow(int start, int end) {
     int totalFlow = findMaxFlow(start, end);
     cout << "-> Faza 1: Znaleziono maksymalny przeplyw: " << totalFlow << " krasnoludkow." << endl;
 
-    vector<int> dist(vertices);
-    vector<int> parent(vertices);
-    vector<int> edge_to_parent(vertices);
+    vector<int> dist(vertices), parent(vertices), edge_to_parent(vertices);
 
-    while (true)
-    {
+    while (true) {
         fill(dist.begin(), dist.end(), 0);
         fill(parent.begin(), parent.end(), -1);
         fill(edge_to_parent.begin(), edge_to_parent.end(), -1);
 
         int node_in_cycle = -1;
 
-        for (int i = 0; i < vertices; i++)
-        {
+        for (int i = 0; i < vertices; i++) {
             node_in_cycle = -1;
-            for (int u = 0; u < vertices; u++)
-            {
-                for (int j = 0; j < (int)adj[u].size(); j++)
-                {
+            for (int u = 0; u < vertices; u++) {
+                for (int j = 0; j < (int)adj[u].size(); j++) {
                     Edge &e = adj[u][j];
-                    if (e.capacity > e.flow && dist[e.to] > dist[u] + e.cost)
-                    {
-                        dist[e.to] = dist[u] + e.cost;
-                        parent[e.to] = u;
-                        edge_to_parent[e.to] = j;
-                        node_in_cycle = e.to;
+                    if (e.capacity > e.flow && dist[e.to] > dist[u] + e.cost) {
+                        dist[e.to] = dist[u] + e.cost; parent[e.to] = u;
+                        edge_to_parent[e.to] = j; node_in_cycle = e.to;
                     }
                 }
             }
         }
-
-        if (node_in_cycle == -1)
-            break;
-
-        for (int i = 0; i < vertices; i++)
-            node_in_cycle = parent[node_in_cycle];
+        if (node_in_cycle == -1) break;
+        for (int i = 0; i < vertices; i++) node_in_cycle = parent[node_in_cycle];
 
         vector<pair<int, int>> cycle;
         int curr = node_in_cycle;
-        do
-        {
+        do {
             int prev = parent[curr];
-            cycle.push_back({prev, edge_to_parent[curr]});
-            curr = prev;
+            cycle.push_back({prev, edge_to_parent[curr]}); curr = prev;
         } while (curr != node_in_cycle);
 
         int push = INF;
-        for (auto &p : cycle)
-        {
-            push = min(push, adj[p.first][p.second].capacity - adj[p.first][p.second].flow);
-        }
-
-        for (auto &p : cycle)
-        {
-            int u = p.first;
-            int idx = p.second;
-            int v = adj[u][idx].to;
-            int rev_idx = adj[u][idx].rev_idx;
-            adj[u][idx].flow += push;
-            adj[v][rev_idx].flow -= push;
+        for (auto &p : cycle) push = min(push, adj[p.first][p.second].capacity - adj[p.first][p.second].flow);
+        for (auto &p : cycle) {
+            int u = p.first; int idx = p.second;
+            int v = adj[u][idx].to; int rev_idx = adj[u][idx].rev_idx;
+            adj[u][idx].flow += push; adj[v][rev_idx].flow -= push;
         }
     }
 
     long long totalCost = 0;
-    for (int u = 0; u < vertices; u++)
-    {
-        for (auto &e : adj[u])
-        {
-            if (e.flow > 0 && e.cost > 0)
-                totalCost += (long long)e.flow * e.cost;
+    for (int u = 0; u < vertices; u++) {
+        for (auto &e : adj[u]) {
+            if (e.flow > 0 && e.cost > 0) totalCost += (long long)e.flow * e.cost;
         }
     }
     cout << "-> Faza 2: Optymalizacja zakonczona." << endl;
     cout << "-> Laczny najmniejszy dystans krasnoludkow: " << totalCost << " km" << endl;
 }
 
-// ==========================
-// Budowanie otoczki wypukłej
-// ==========================
-
 void Graph::obliczTraseKsiecia()
 {
     vector<Wspolrzedne> punkty;
     int N = krasnoludki.size();
 
-    // 1. Wybieramy tylko kopalnie, ktore faktycznie pracuja (maja flow do ujscia)
-    for (int j = 0; j < kopalnie.size(); j++)
-    {
+    for (size_t j = 0; j < kopalnie.size(); j++) {
         int u = N + j + 1;
         bool uzywana = false;
-        for (auto &e : adj[u])
-        {
-            if (e.to == ujscie && e.flow > 0)
-            {
-                uzywana = true;
-                break;
+        for (auto &e : adj[u]) {
+            if (e.to == ujscie && e.flow > 0) {
+                uzywana = true; break;
             }
         }
-        if (uzywana)
-            punkty.push_back(kopalnie[j].wspolrzedne);
+        if (uzywana) punkty.push_back(kopalnie[j].wspolrzedne);
     }
 
-    if (punkty.size() < 2)
-    {
-        cout << "Problem 2: Trasa patrolowa: 0 km (za malo kopalni)\n";
-        return;
+    if (punkty.size() < 2) {
+        cout << "Problem 2: Trasa patrolowa: 0 km (za malo kopalni)\n"; return;
     }
 
     vector<Wspolrzedne> otoczka = zbudujOtoczke(punkty);
     double dystans = obliczObwod(otoczka);
 
+    this->aktualnaOtoczka = otoczka; 
     cout << "---------------------------------------------------\n";
     cout << "PROBLEM 2: Trasa patrolowa Ksiecia: " << round(dystans) << " km\n";
     cout << "---------------------------------------------------\n";
-
-    // --- Zapisywanie otoczki dla Pythona ---
-    std::ofstream plikOtoczka("data/otoczka.txt");
-    if (plikOtoczka.is_open())
-    {
-        for (const auto &p : otoczka)
-        {
-            plikOtoczka << p.x << " " << p.y << "\n";
-        }
-        plikOtoczka.close();
-    }
-    else
-    {
-        std::cout << "Blad: Nie udalo sie utworzyc pliku otoczka.txt!\n";
-    }
 }
 
-// ==========================================================
-// Salwa Dekametrowcow
-// ==========================================================
-void Graph::obliczSalwe() {
-    int lewy_indeks = -1, prawy_indeks = -1;
-    
-    // ODCZYT ZAPYTANIA OD PYTHONA
-    std::ifstream plikAtak("data/atak.txt");
-    if (plikAtak.is_open()) {
-        plikAtak >> lewy_indeks >> prawy_indeks;
-        plikAtak.close();
-    } else {
-        // Jeśli nie ma pliku ataku (np. zwykłe uruchomienie MCMF), wychodzimy
-        return; 
-    }
-
-    // DYNAMICZNE TWORZENIE ODDZIAŁU NA BAZIE OTOCZKI WYPUKŁEJ
-    vector<Dekametrowiec> oddzial;
-    std::ifstream plikOtoczka("data/otoczka.txt");
-    
-    if (plikOtoczka.is_open()) {
-        int x, y;
-        int idx = 0;
-        while (plikOtoczka >> x >> y) {
-            // Generujemy unikalne ID: np. 1000, 1001, 1002...
-            int id_dekametrowca = 1000 + idx;
-            
-            // Matematyczny wzór gwarantuje, że głośność zależy od pozycji punktu na mapie
-            // i zawsze będzie stała dla tego samego zestawu kopalń (zakres głośności: 30 - 100)
-            int glosnosc = ((x * 3 + y * 7) % 71) + 30; 
-            
-            oddzial.push_back({id_dekametrowca, glosnosc});
-            idx++;
-        }
-        plikOtoczka.close();
-    }
-
-    // Zabezpieczenie na wypadek braku otoczki
-    if (oddzial.empty()) return;
-
-    int n = oddzial.size();
-    if (lewy_indeks >= n) lewy_indeks = 0;
-    if (prawy_indeks >= n) prawy_indeks = n - 1;
-
-    DrzewoPrzedzialowe drzewo(oddzial);
-    int dowodcaID = -1;
-
-    // 3. BUDOWA DRZEWA I ZAPYTANIE (Z obsługą ataku dookoła!)
-    if (lewy_indeks <= prawy_indeks) {
-        // Standardowy atak w linii prostej
-        dowodcaID = drzewo.zapytajONajglosniejszego(lewy_indeks, prawy_indeks);
-    } else {
-        // Atak przechodzący przez "zszycie" granicy (od końca do początku)
-        // Rozbijamy na dwa zapytania do Drzewa Przedziałowego
-        int id1 = drzewo.zapytajONajglosniejszego(lewy_indeks, n - 1);
-        int id2 = drzewo.zapytajONajglosniejszego(0, prawy_indeks);
-        
-        // Sprawdzamy, który z wyłonionych liderów krzyczy głośniej
-        int glosnosc1 = -1, glosnosc2 = -1;
-        for (const auto& d : oddzial) {
-            if (d.ID == id1) glosnosc1 = d.glosnosc;
-            if (d.ID == id2) glosnosc2 = d.glosnosc;
-        }
-        dowodcaID = (glosnosc1 > glosnosc2) ? id1 : id2;
-    }
-    
-    // ZAPISYWANIE WYNIKU DLA PYTHONA
-    std::ofstream plikSalwa("data/wyniki_salwa.txt");
-    if (plikSalwa.is_open()) {
-        plikSalwa << lewy_indeks << " " << prawy_indeks << " " << dowodcaID << "\n";
-        plikSalwa.close();
-    }
-}
 void Graph::obliczKsiegi() {
-    // Odczyt akcji z GUI
     std::ifstream plikAkcji("data/akcja_ksiegi.txt");
     std::string akcja = "";
     if (plikAkcji.is_open()) {
         plikAkcji >> akcja;
         plikAkcji.close();
     }
-    // Jeśli nie wybrano akcji dla ksiąg, po prostu wychodzimy
     if (akcja.empty()) return;
 
-    // Odczyt tekstu kroniki królestwa
     std::ifstream plikKsiegi("data/ksiega.txt");
     std::string tekst((std::istreambuf_iterator<char>(plikKsiegi)), std::istreambuf_iterator<char>());
     plikKsiegi.close();
 
-    // Domyślny tekst, jeśli plik jeszcze nie powstał
     if (tekst.empty()) {
         tekst = "Kroniki Krolestwa Sniezki i Ksiecia: Krasnoludki pracuja ciezko w kopalniach zlota i diamentow. Owsianka gotuje sie codziennie rano.";
         std::ofstream zapiszDomyslna("data/ksiega.txt");
@@ -531,7 +288,6 @@ void Graph::obliczKsiegi() {
     ElektroniczneKsiegi ek;
     std::ofstream plikWynikow("data/wyniki_ksiegi.txt");
 
-    // Wykonanie odpowiedniego algorytmu na żądanie
     if (akcja == "KOMPRESJA") {
         ek.budujDrzewoHuffmana(tekst);
         std::string skompresowany = ek.kompresuj(tekst);
