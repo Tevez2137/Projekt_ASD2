@@ -14,20 +14,14 @@
 #include "ksiegi.h"
 
 using namespace std;
-
 const int INF = 1e9;
 
-void Graph::init()
-{
+void Graph::init() {
     ElektroniczneKsiegi ek;
 
     string skompKop = ek.wczytajArchiwumZDysku("data/kopalnie.bin");
     string csvKop = ek.dekompresuj(skompKop);
-
-    if (csvKop.empty()) {
-        cout << "Blad: Baza danych kopalnie.bin jest pusta. Zaimportuj dane przez GUI!" << endl;
-        return;
-    }
+    if (csvKop.empty()) return;
 
     stringstream ssKop(csvKop);
     string linia; getline(ssKop, linia);
@@ -44,11 +38,7 @@ void Graph::init()
 
     string skompKras = ek.wczytajArchiwumZDysku("data/dane_krasnoludkow.bin");
     string csvKras = ek.dekompresuj(skompKras);
-
-    if (csvKras.empty()) {
-        cout << "Blad: Baza danych dane_krasnoludkow.bin jest pusta. Zaimportuj dane przez GUI!" << endl;
-        return;
-    }
+    if (csvKras.empty()) return;
 
     stringstream ssKras(csvKras);
     getline(ssKras, linia);
@@ -76,9 +66,7 @@ void Graph::init()
     this->buildGraph();
     this->minCostMaxFlow(this->zrodlo, this->ujscie);
     this->obliczTraseKsiecia();
-    // USUNIĘTO OBLICZANIE SALWY Z PLIKÓW
     this->obliczKsiegi();
-    
     this->saveResults(""); 
 }
 
@@ -109,24 +97,26 @@ void Graph::saveResults(const std::string& /*filename*/) {
     ElektroniczneKsiegi ek;
     string csvWynik = ssOut.str();
     ek.budujDrzewoHuffmana(csvWynik);
-    
     ek.zapiszArchiwumNaDysk("data/dane_krasnoludkow.bin", ek.kompresuj(csvWynik));
     cout << "Gotowe! Zaktualizowano binarne archiwum krasnoludkow." << endl;
 }
 
-void Graph::buildGraph()
-{
+Graph::Graph(int v) : vertices(v) { adj.resize(vertices); }
+
+void Graph::addEdge(int u, int v, int cap, int cost) {
+    adj[u].push_back({v, cap, 0, cost, (int)adj[v].size()});
+    adj[v].push_back({u, 0, 0, -cost, (int)adj[u].size() - 1});
+}
+
+void Graph::buildGraph() {
     int N = this->krasnoludki.size();
     int M = this->kopalnie.size();
-
-    for (int i = 0; i < N; ++i)
-        addEdge(this->zrodlo, i + 1, 1, 0);
+    for (int i = 0; i < N; ++i) addEdge(this->zrodlo, i + 1, 1, 0);
 
     for (int i = 0; i < N; ++i) {
         for (int j = 0; j < M; ++j) {
-            std::string surowiecKopalni = this->kopalnie[j].surowiec;
-            auto it = std::find(this->krasnoludki[i].mineraly.begin(), this->krasnoludki[i].mineraly.end(), surowiecKopalni);
-
+            std::string surowiec = this->kopalnie[j].surowiec;
+            auto it = std::find(this->krasnoludki[i].mineraly.begin(), this->krasnoludki[i].mineraly.end(), surowiec);
             if (it != this->krasnoludki[i].mineraly.end()) {
                 double dx = this->krasnoludki[i].domek.x - this->kopalnie[j].wspolrzedne.x;
                 double dy = this->krasnoludki[i].domek.y - this->kopalnie[j].wspolrzedne.y;
@@ -135,16 +125,7 @@ void Graph::buildGraph()
             }
         }
     }
-
-    for (int j = 0; j < M; ++j)
-        addEdge(N + j + 1, this->ujscie, this->kopalnie[j].iloscMiejsc, 0);
-}
-
-Graph::Graph(int v) : vertices(v) { adj.resize(vertices); }
-
-void Graph::addEdge(int u, int v, int cap, int cost) {
-    adj[u].push_back({v, cap, 0, cost, (int)adj[v].size()});
-    adj[v].push_back({u, 0, 0, -cost, (int)adj[u].size() - 1});
+    for (int j = 0; j < M; ++j) addEdge(N + j + 1, this->ujscie, this->kopalnie[j].iloscMiejsc, 0);
 }
 
 int Graph::findMaxFlow(int s, int t) {
@@ -158,7 +139,7 @@ int Graph::findMaxFlow(int s, int t) {
 
         while (!q.empty()) {
             int u = q.front(); q.pop();
-            for (int i = 0; i < (int)adj[u].size(); i++) {
+            for (size_t i = 0; i < adj[u].size(); i++) {
                 Edge &e = adj[u][i];
                 if (parent[e.to] == -1 && e.capacity > e.flow) {
                     parent[e.to] = u; edge_from[e.to] = i; q.push(e.to);
@@ -185,20 +166,18 @@ int Graph::findMaxFlow(int s, int t) {
 void Graph::minCostMaxFlow(int start, int end) {
     int totalFlow = findMaxFlow(start, end);
     cout << "-> Faza 1: Znaleziono maksymalny przeplyw: " << totalFlow << " krasnoludkow." << endl;
-
     vector<int> dist(vertices), parent(vertices), edge_to_parent(vertices);
 
     while (true) {
         fill(dist.begin(), dist.end(), 0);
         fill(parent.begin(), parent.end(), -1);
         fill(edge_to_parent.begin(), edge_to_parent.end(), -1);
-
         int node_in_cycle = -1;
 
         for (int i = 0; i < vertices; i++) {
             node_in_cycle = -1;
             for (int u = 0; u < vertices; u++) {
-                for (int j = 0; j < (int)adj[u].size(); j++) {
+                for (size_t j = 0; j < adj[u].size(); j++) {
                     Edge &e = adj[u][j];
                     if (e.capacity > e.flow && dist[e.to] > dist[u] + e.cost) {
                         dist[e.to] = dist[u] + e.cost; parent[e.to] = u;
@@ -225,19 +204,9 @@ void Graph::minCostMaxFlow(int start, int end) {
             adj[u][idx].flow += push; adj[v][rev_idx].flow -= push;
         }
     }
-
-    long long totalCost = 0;
-    for (int u = 0; u < vertices; u++) {
-        for (auto &e : adj[u]) {
-            if (e.flow > 0 && e.cost > 0) totalCost += (long long)e.flow * e.cost;
-        }
-    }
-    cout << "-> Faza 2: Optymalizacja zakonczona." << endl;
-    cout << "-> Laczny najmniejszy dystans krasnoludkow: " << totalCost << " km" << endl;
 }
 
-void Graph::obliczTraseKsiecia()
-{
+void Graph::obliczTraseKsiecia() {
     vector<Wspolrzedne> punkty;
     int N = krasnoludki.size();
 
@@ -245,45 +214,30 @@ void Graph::obliczTraseKsiecia()
         int u = N + j + 1;
         bool uzywana = false;
         for (auto &e : adj[u]) {
-            if (e.to == ujscie && e.flow > 0) {
-                uzywana = true; break;
-            }
+            if (e.to == ujscie && e.flow > 0) { uzywana = true; break; }
         }
         if (uzywana) punkty.push_back(kopalnie[j].wspolrzedne);
     }
 
-    if (punkty.size() < 2) {
-        cout << "Problem 2: Trasa patrolowa: 0 km (za malo kopalni)\n"; return;
-    }
+    if (punkty.size() < 2) return;
 
+    // ZAPIS W PAMIĘCI RAM
     vector<Wspolrzedne> otoczka = zbudujOtoczke(punkty);
-    double dystans = obliczObwod(otoczka);
-
     this->aktualnaOtoczka = otoczka; 
-    cout << "---------------------------------------------------\n";
+    
+    double dystans = obliczObwod(otoczka);
     cout << "PROBLEM 2: Trasa patrolowa Ksiecia: " << round(dystans) << " km\n";
-    cout << "---------------------------------------------------\n";
 }
 
 void Graph::obliczKsiegi() {
     std::ifstream plikAkcji("data/akcja_ksiegi.txt");
     std::string akcja = "";
-    if (plikAkcji.is_open()) {
-        plikAkcji >> akcja;
-        plikAkcji.close();
-    }
+    if (plikAkcji.is_open()) { plikAkcji >> akcja; plikAkcji.close(); }
     if (akcja.empty()) return;
 
     std::ifstream plikKsiegi("data/ksiega.txt");
     std::string tekst((std::istreambuf_iterator<char>(plikKsiegi)), std::istreambuf_iterator<char>());
     plikKsiegi.close();
-
-    if (tekst.empty()) {
-        tekst = "Kroniki Krolestwa Sniezki i Ksiecia: Krasnoludki pracuja ciezko w kopalniach zlota i diamentow. Owsianka gotuje sie codziennie rano.";
-        std::ofstream zapiszDomyslna("data/ksiega.txt");
-        zapiszDomyslna << tekst;
-        zapiszDomyslna.close();
-    }
 
     ElektroniczneKsiegi ek;
     std::ofstream plikWynikow("data/wyniki_ksiegi.txt");
@@ -291,36 +245,19 @@ void Graph::obliczKsiegi() {
     if (akcja == "KOMPRESJA") {
         ek.budujDrzewoHuffmana(tekst);
         std::string skompresowany = ek.kompresuj(tekst);
-        
-        int oryginalneBity = tekst.length() * 8;
-        int skompresowaneBity = skompresowany.length();
-        double stopienOszczednosci = oryginalneBity > 0 ? (1.0 - (double)skompresowaneBity / oryginalneBity) * 100.0 : 0.0;
-
-        if (plikWynikow.is_open()) {
-            plikWynikow << "KOMPRESJA\n";
-            plikWynikow << oryginalneBity << " " << skompresowaneBity << " " << stopienOszczednosci << "\n";
-            plikWynikow.close();
-        }
+        int oryg = tekst.length() * 8;
+        double oszczednosc = oryg > 0 ? (1.0 - (double)skompresowany.length() / oryg) * 100.0 : 0.0;
+        if (plikWynikow.is_open()) plikWynikow << "KOMPRESJA\n" << oryg << " " << skompresowany.length() << " " << oszczednosc << "\n";
     } 
     else if (akcja == "SZUKAJ") {
         std::string wzorzec = "";
         std::ifstream plikWzorca("data/wzorzec.txt");
-        if (plikWzorca.is_open()) {
-            std::getline(plikWzorca, wzorzec);
-            plikWzorca.close();
-        }
-        if (wzorzec.empty()) return;
-
-        std::vector<int> znalezionePozycje = ek.szukajRabinKarp(tekst, wzorzec);
-        
+        if (plikWzorca.is_open()) { std::getline(plikWzorca, wzorzec); plikWzorca.close(); }
+        std::vector<int> poz = ek.szukajRabinKarp(tekst, wzorzec);
         if (plikWynikow.is_open()) {
-            plikWynikow << "SZUKAJ\n";
-            plikWynikow << znalezionePozycje.size() << "\n";
-            for (int pos : znalezionePozycje) {
-                plikWynikow << pos << " ";
-            }
+            plikWynikow << "SZUKAJ\n" << poz.size() << "\n";
+            for (int p : poz) plikWynikow << p << " ";
             plikWynikow << "\n";
-            plikWynikow.close();
         }
     }
 }

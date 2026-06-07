@@ -3,7 +3,7 @@ import os
 import subprocess
 from PySide6.QtWidgets import (QApplication, QMainWindow, QGraphicsScene, QMessageBox, QGraphicsView,
                                QDialog, QVBoxLayout, QFormLayout, QLineEdit, QDialogButtonBox, QLabel,
-                               QFileDialog, QPushButton)
+                               QFileDialog)
 from PySide6.QtGui import QPen, QBrush, QColor
 from PySide6.QtCore import Qt
 
@@ -48,7 +48,7 @@ class GlowneOkno(QMainWindow):
         exe_name = "symulacja_krasnoludkow.exe" if sys.platform == "win32" else "symulacja_krasnoludkow"
         self.exe_path = os.path.join(project_dir, "build", exe_name)
 
-        # BRAK POP-UPU - Automatyczne ładowanie bazy jeśli nie istnieje
+        # BEZ POP-UPU NA START! Od razu włączamy apkę
         try:
             path_bin_kop = os.path.join(data_dir, "kopalnie.bin")
             if not os.path.exists(path_bin_kop) and os.path.exists(self.exe_path):
@@ -68,13 +68,15 @@ class GlowneOkno(QMainWindow):
         self.ui.map.setDragMode(QGraphicsView.ScrollHandDrag)
         self.ui.map.wheelEvent = self.obsluga_zooma
         
-        # Bezpieczne podpinanie przycisków z Qt Designera
+        # Bezpieczne bindowanie (Aplikacja nie sypnie błędem jeśli zmienisz nazwę w UI)
         if hasattr(self.ui, 'btnUruchomMCMF'): self.ui.btnUruchomMCMF.clicked.connect(self.uruchom_tylko_mcmf)
         if hasattr(self.ui, 'btnDodajDomek'): self.ui.btnDodajDomek.clicked.connect(self.aktywuj_tryb_dodawania)
         if hasattr(self.ui, 'odswiezMape'): self.ui.odswiezMape.clicked.connect(self.wczytaj_i_rysuj)
         if hasattr(self.ui, 'btn_atak'): self.ui.btn_atak.clicked.connect(self.obsluga_ataku_salwa)
         if hasattr(self.ui, 'btn_kompresja'): self.ui.btn_kompresja.clicked.connect(self.obsluga_kompresji_ksiegi)
         if hasattr(self.ui, 'btn_szukaj'): self.ui.btn_szukaj.clicked.connect(self.obsluga_wyszukiwania_ksiegi)
+        
+        # Przyciski importu i eksportu 
         if hasattr(self.ui, 'btn_import'): self.ui.btn_import.clicked.connect(self.import_danych)
         if hasattr(self.ui, 'btn_eksport'): self.ui.btn_eksport.clicked.connect(self.eksport_danych)
         if hasattr(self.ui, 'actionImport'): self.ui.actionImport.triggered.connect(self.import_danych)
@@ -95,7 +97,7 @@ class GlowneOkno(QMainWindow):
             try:
                 subprocess.run([self.exe_path, "IMPORT", kopalnie_path, krasnale_path], cwd=os.path.join(os.path.dirname(__file__), ".."), check=True)
                 self.wczytaj_i_rysuj()
-                QMessageBox.information(self, "Import", "Dane CSV zostały skompresowane w locie i zaimportowane do bazy BIN!")
+                QMessageBox.information(self, "Import", "Dane CSV zostały pomyślnie zaimportowane do bazy BIN!")
             except Exception as e:
                 QMessageBox.critical(self, "Błąd", f"Nie udało się zaimportować plików:\n{e}")
 
@@ -104,7 +106,7 @@ class GlowneOkno(QMainWindow):
         if docelowa:
             try:
                 subprocess.run([self.exe_path, "EKSPORT", docelowa], cwd=os.path.join(os.path.dirname(__file__), ".."), check=True)
-                QMessageBox.information(self, "Eksport", "Dane odkodowane z bazy BIN i wyeksportowane do CSV!")
+                QMessageBox.information(self, "Eksport", "Baza BIN została wyeksportowana do CSV!")
             except Exception as e:
                 QMessageBox.critical(self, "Błąd", f"Eksport bazy nieudany:\n{e}")
 
@@ -113,11 +115,13 @@ class GlowneOkno(QMainWindow):
         self.ui.map.scale(zoom, zoom)
 
     def obsluga_ataku_salwa(self):
-        self.ostatni_atak = (self.ui.spin_od.value(), self.ui.spin_do.value())
-        self.wczytaj_i_rysuj()
+        # Koniec z atak.txt! Podajemy parametry salwy w locie
+        if hasattr(self.ui, 'spin_od') and hasattr(self.ui, 'spin_do'):
+            self.ostatni_atak = (self.ui.spin_od.value(), self.ui.spin_do.value())
+            self.wczytaj_i_rysuj()
 
     def uruchom_tylko_mcmf(self):
-        self.ostatni_atak = None
+        self.ostatni_atak = None # Czyści rysunek salwy
         path_akcja = os.path.join(os.path.dirname(__file__), "..", "data", "akcja_ksiegi.txt")
         if os.path.exists(path_akcja): os.remove(path_akcja)
         self.uruchom_silnik_cpp()
@@ -128,39 +132,44 @@ class GlowneOkno(QMainWindow):
         self.uruchom_silnik_cpp()
 
     def obsluga_wyszukiwania_ksiegi(self):  
-        fraza = self.ui.input_szukaj.text().strip()
-        if not fraza:
-            QMessageBox.warning(self, "Błąd", "Wpisz słowo, którego szukasz w księgach!")
-            return
-        base_dir = os.path.dirname(__file__)
-        with open(os.path.join(base_dir, "..", "data", "akcja_ksiegi.txt"), "w", encoding="utf-8") as f: f.write("SZUKAJ")
-        with open(os.path.join(base_dir, "..", "data", "wzorzec.txt"), "w", encoding="utf-8") as f: f.write(fraza)
-        self.uruchom_silnik_cpp()
+        if hasattr(self.ui, 'input_szukaj'):
+            fraza = self.ui.input_szukaj.text().strip()
+            if not fraza:
+                QMessageBox.warning(self, "Błąd", "Wpisz słowo, którego szukasz w księgach!")
+                return
+            base_dir = os.path.dirname(__file__)
+            with open(os.path.join(base_dir, "..", "data", "akcja_ksiegi.txt"), "w", encoding="utf-8") as f: f.write("SZUKAJ")
+            with open(os.path.join(base_dir, "..", "data", "wzorzec.txt"), "w", encoding="utf-8") as f: f.write(fraza)
+            self.uruchom_silnik_cpp()
 
     def uruchom_silnik_cpp(self):
-        self.ui.btnUruchomMCMF.setText("Przetwarzam baze BIN...")
-        self.ui.btnUruchomMCMF.setEnabled(False)
+        if hasattr(self.ui, 'btnUruchomMCMF'):
+            self.ui.btnUruchomMCMF.setText("Przetwarzam baze BIN...")
+            self.ui.btnUruchomMCMF.setEnabled(False)
         QApplication.processEvents()
 
         try:
             if not os.path.exists(self.exe_path):
-                QMessageBox.warning(self, "Brak silnika!", "Najpierw musisz skompilować projekt (make).")
+                QMessageBox.warning(self, "Brak silnika!", "Skompiluj projekt wpisując 'make' w terminalu.")
                 return
             subprocess.run(["make", "run"], cwd=os.path.join(os.path.dirname(__file__), ".."), check=True, capture_output=True, text=True)
             self.wczytaj_i_rysuj()
-            self.ui.statusbar.showMessage("Obliczenia na bazie BIN zakończone błyskawicznie!", 4000)
+            if hasattr(self.ui, 'statusbar'): self.ui.statusbar.showMessage("Obliczenia na bazie BIN zakończone!", 4000)
         except subprocess.CalledProcessError as e:
             QMessageBox.critical(self, "Błąd", f"Algorytm C++ napotkał błąd:\n{e.stderr}")
         finally:
-            self.ui.btnUruchomMCMF.setText("Oblicz Trasy Wydobycia (MCMF)")
-            self.ui.btnUruchomMCMF.setEnabled(True)
+            if hasattr(self.ui, 'btnUruchomMCMF'):
+                self.ui.btnUruchomMCMF.setText("Oblicz Trasy Wydobycia (MCMF)")
+                self.ui.btnUruchomMCMF.setEnabled(True)
 
     def aktywuj_tryb_dodawania(self):
         self.tryb_dodawania = True
         self.ui.map.setCursor(Qt.CrossCursor)
-        self.ui.btnDodajDomek.setText("Wybierz miejsce...")
-        self.ui.btnDodajDomek.setEnabled(False)
-        self.ui.statusbar.showMessage("Kliknij na mapie, aby wskazać pozycję domku.", 6000)
+        if hasattr(self.ui, 'btnDodajDomek'):
+            self.ui.btnDodajDomek.setText("Wybierz miejsce...")
+            self.ui.btnDodajDomek.setEnabled(False)
+        if hasattr(self.ui, 'statusbar'):
+            self.ui.statusbar.showMessage("Kliknij na mapie, aby wskazać pozycję domku.", 6000)
 
     def pobierz_nastepne_id(self):
         max_id = 0
@@ -173,7 +182,7 @@ class GlowneOkno(QMainWindow):
                 if linia == "---OTOCZKA---": break
                 if kras_sekcja and linia and not linia.startswith("ID"):
                     dane = linia.split(',')
-                    if len(dane) > 0 and dane[0].isdigit(): max_id = max(max_id, int(dane[0]))
+                    if len(dane) > 0 and dane[0].lstrip('-').isdigit(): max_id = max(max_id, int(dane[0]))
         except Exception: pass
         return max_id + 1
 
@@ -184,8 +193,9 @@ class GlowneOkno(QMainWindow):
 
             self.tryb_dodawania = False
             self.ui.map.unsetCursor()
-            self.ui.btnDodajDomek.setText("Dodaj domek")
-            self.ui.btnDodajDomek.setEnabled(True)
+            if hasattr(self.ui, 'btnDodajDomek'):
+                self.ui.btnDodajDomek.setText("Dodaj domek")
+                self.ui.btnDodajDomek.setEnabled(True)
 
             self.otworz_modal_domku(x, y, self.pobierz_nastepne_id())
         else:
@@ -202,7 +212,7 @@ class GlowneOkno(QMainWindow):
         try:
             subprocess.run([self.exe_path, "ADD_DWARF", str(dane['id']), str(dane['id_kop']), dane['mineraly'], str(dane['x']), str(dane['y'])],
                 cwd=os.path.join(os.path.dirname(__file__), ".."), check=True, capture_output=True, text=True)
-            self.ui.statusbar.showMessage(f"Zarejestrowano w bazie BIN (ID {dane['id']}). Przeliczam trasy...", 4000)
+            if hasattr(self.ui, 'statusbar'): self.ui.statusbar.showMessage(f"Zarejestrowano w BIN (ID {dane['id']})", 4000)
             self.uruchom_silnik_cpp()
         except Exception as e:
             QMessageBox.critical(self, "Błąd zapisu", f"Nie udało się dopisać krasnoludka do bazy BIN:\n{e}")
@@ -215,6 +225,8 @@ class GlowneOkno(QMainWindow):
 
         try:
             args = [self.exe_path, "GUI_DATA_DUMP"]
+            
+            # Wstrzyknięcie salwy z pamięci (żegnaj atak.txt!)
             if getattr(self, 'ostatni_atak', None):
                 args.extend(["SALWA", str(self.ostatni_atak[0]), str(self.ostatni_atak[1])])
 
@@ -229,6 +241,7 @@ class GlowneOkno(QMainWindow):
                 if linia == "---OTOCZKA---": otoczka_sekcja = True; kop_sekcja = kras_sekcja = salwa_sekcja = False; continue
                 if linia == "---SALWA---": salwa_sekcja = True; kop_sekcja = kras_sekcja = otoczka_sekcja = False; continue
                 
+                # PARSOWANIE PANCERNE
                 if kop_sekcja and not linia.startswith("ID"):
                     dane = linia.split(',')
                     if len(dane) >= 4 and dane[0].lstrip('-').isdigit():
@@ -278,6 +291,7 @@ class GlowneOkno(QMainWindow):
             tooltip += f"<br><b>Pracuje w:</b> Kopalnia nr {data['id_kop']}" if data['id_kop'] > 0 else "<br><i>Brak przypisania!</i>"
             ellipse.setToolTip(tooltip)
 
+        # RYSOWANIE SALWY Z RAM (bez wyniku .txt)
         if wynik_salwy:
             l_idx, r_idx, dowodca = wynik_salwy
             if len(self.punkty_otoczki) > 0:
@@ -297,8 +311,9 @@ class GlowneOkno(QMainWindow):
                 tekst.setPos(dow_pt[0] + 15, dow_pt[1] - 30)
             
             QMessageBox.warning(self, "Atak!", f"Atak na odcinek {l_idx}-{r_idx}!\nRozkaz wydaje Dekametrowiec ID: {dowodca}")
-            self.ostatni_atak = None 
+            self.ostatni_atak = None # Po wyrysowaniu kasujemy pamięć o ataku
 
+        # ODCZYT KSIĄG
         path_wyniki_ksiegi = os.path.join(os.path.dirname(__file__), "..", "data", "wyniki_ksiegi.txt")
         path_akcja = os.path.join(os.path.dirname(__file__), "..", "data", "akcja_ksiegi.txt")
         if os.path.exists(path_wyniki_ksiegi):
