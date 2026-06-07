@@ -1,0 +1,17 @@
+ID,ID_kopalni,Mineraly,X,Y
+1,0,Zloto,80,80
+2,0,Zloto,120,80
+3,0,Zloto,80,120
+4,0,Zloto,120,120
+5,0,Srebro,680,80
+6,0,Srebro,720,80
+7,0,Srebro,680,120
+8,0,Srebro,720,120
+9,0,Wegiel,680,580
+10,0,Wegiel,720,580
+11,0,Wegiel,680,620
+12,0,Wegiel,720,620
+13,0,Miedz,80,580
+14,0,Miedz,120,580
+15,0,Miedz,80,620
+16,0,Miedz,120,620

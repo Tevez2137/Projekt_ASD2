@@ -1,0 +1,2 @@
+ID,X,Y,Surowiec,IloscMiejsc
+1,400,300,Zloto,5
