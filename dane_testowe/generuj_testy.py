@@ -2,8 +2,8 @@ import os
 import random
 
 # USTAWIENIA 
-ILE_KOPALNI_WIELKIE = 50       
-ILE_KRASNALI_WIELKIE = 200     
+ILE_KOPALNI_WIELKIE =  200      
+ILE_KRASNALI_WIELKIE = 1000 
 WYMIARY_MAPY = 800             
 SUROWCE = ["Zloto", "Srebro", "Wegiel", "Miedz", "Zelazo", "Diamenty"]
 # ==============================================

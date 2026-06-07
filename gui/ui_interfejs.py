@@ -118,10 +118,15 @@ class Ui_mainWindow(object):
         self.tab_ksiegi.setObjectName(u"tab_ksiegi")
         self.verticalLayout_3 = QVBoxLayout(self.tab_ksiegi)
         self.verticalLayout_3.setObjectName(u"verticalLayout_3")
-        self.btn_kompresja = QPushButton(self.tab_ksiegi)
-        self.btn_kompresja.setObjectName(u"btn_kompresja")
+        self.btn_import = QPushButton(self.tab_ksiegi)
+        self.btn_import.setObjectName(u"btn_import")
 
-        self.verticalLayout_3.addWidget(self.btn_kompresja)
+        self.verticalLayout_3.addWidget(self.btn_import)
+
+        self.btn_eksport = QPushButton(self.tab_ksiegi)
+        self.btn_eksport.setObjectName(u"btn_eksport")
+
+        self.verticalLayout_3.addWidget(self.btn_eksport)
 
         self.input_szukaj = QLineEdit(self.tab_ksiegi)
         self.input_szukaj.setObjectName(u"input_szukaj")
@@ -149,7 +154,7 @@ class Ui_mainWindow(object):
 
         self.retranslateUi(mainWindow)
 
-        self.tabWidget.setCurrentIndex(0)
+        self.tabWidget.setCurrentIndex(2)
 
 
         QMetaObject.connectSlotsByName(mainWindow)
@@ -167,9 +172,18 @@ class Ui_mainWindow(object):
         self.label_do.setText(QCoreApplication.translate("mainWindow", u"Koniec odcinka ataku:", None))
         self.btn_atak.setText(QCoreApplication.translate("mainWindow", u"Wezwij Dekametrowc\u00f3w!", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_obrona), QCoreApplication.translate("mainWindow", u"\U0001f3f9 Obrona Granic", None))
-        self.btn_kompresja.setText(QCoreApplication.translate("mainWindow", u"Kompresuj Archiwa (Huffman)", None))
+        self.btn_import.setText(QCoreApplication.translate("mainWindow", u"Importuj Dane", None))
+        self.btn_eksport.setText(QCoreApplication.translate("mainWindow", u"Eksportuj Dane", None))
         self.input_szukaj.setPlaceholderText(QCoreApplication.translate("mainWindow", u"Wpisz szukan\u0105 run\u0119/s\u0142owo...", None))
         self.btn_szukaj.setText(QCoreApplication.translate("mainWindow", u"Przeszukaj Ksi\u0119gi (Rabin-Karp)", None))
-        self.textBrowser_ksiegi.setHtml(QCoreApplication.translate("mainWindow", u"<html><head/><body><p style=\"color:#a89f91; font-style:italic;\">Ksi\u0119ga jest pusta. Za\u0142aduj tekst, aby go przeczyta\u0107.</p></body></html>", None))
+        self.textBrowser_ksiegi.setHtml(QCoreApplication.translate("mainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+"<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
+"p, li { white-space: pre-wrap; }\n"
+"hr { height: 1px; border-width: 0; }\n"
+"li.unchecked::marker { content: \"\\2610\"; }\n"
+"li.checked::marker { content: \"\\2612\"; }\n"
+"</style></head><body style=\" font-family:'.AppleSystemUIFont'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-style:italic; color:#a89f91;\">Ksi\u0119ga jest pusta. Za\u0142aduj tekst, aby go przeczyta\u0107.</span></p></body></html>", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_ksiegi), QCoreApplication.translate("mainWindow", u"\U0001f4dc Ksi\U00000119gi Kr\U000000f3lestwa", None))
     # retranslateUi
+

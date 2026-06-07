@@ -2,14 +2,11 @@
 #define MAPA_H
 
 #include <vector>
-#include <utility>
 #include <string>
-
 #include "kopalnia.h"
 #include "krasnoludek.h"
-#include "ksiegi.h"
+#include "otoczka.h"
 
-// Struktura krawędzi
 struct Edge {
     int to;
     int capacity;
@@ -19,31 +16,26 @@ struct Edge {
 };
 
 class Graph {
-private:
-    int vertices;
-    std::vector<std::vector<Edge>> adj;
-
 public:
-    // Wektory przechowujące wczytane dane
-    std::vector<Kopalnia> kopalnie;
-    std::vector<Krasnoludek> krasnoludki;
-
+    int vertices;
     int zrodlo;
     int ujscie;
-
-    // Podstawowe funkcje grafowe
-    Graph(int v);
-    void addEdge(int u, int v, int cap, int cost);
-    void minCostMaxFlow(int start, int end);
-    int findMaxFlow(int s, int t);
-    // Funkcje do zarządzania rurociągiem danych
-    void init();                                     // Główny silnik (odpala resztę)
-    void buildGraph();                               // Buduje krawędzie i filtruje preferencje
-    void saveResults(const std::string& filename);   // Zapisuje wyniki do pliku txt
+    std::vector<std::vector<Edge>> adj;
+    std::vector<Krasnoludek> krasnoludki;
+    std::vector<Kopalnia> kopalnie;
     
+    // Zmienna przechowująca otoczkę w pamięci RAM!
+    std::vector<Wspolrzedne> aktualnaOtoczka;
+
+    Graph(int v);
+    void init();
+    void buildGraph();
+    void addEdge(int u, int v, int cap, int cost);
+    int findMaxFlow(int s, int t);
+    void minCostMaxFlow(int start, int end);
     void obliczTraseKsiecia();
-    void obliczSalwe();
     void obliczKsiegi();
+    void saveResults(const std::string& filename);
 };
 
 #endif

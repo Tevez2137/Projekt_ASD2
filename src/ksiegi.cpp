@@ -101,67 +101,45 @@ std::vector<int> ElektroniczneKsiegi::szukajRabinKarp(const std::string& tekst, 
 }// Zapisuje wygenerowany słownik i skompresowany tekst do pliku
 void ElektroniczneKsiegi::zapiszArchiwumNaDysk(const std::string& sciezka, const std::string& skompresowany) {
     std::ofstream out(sciezka);
-    if (!out.is_open()) {
-        std::cerr << "Blad zapisu archiwum!\n";
-        return;
-    }
-
-    // 1. Zapisz rozmiar słownika
+    if (!out.is_open()) return;
     out << huffmanCodes.size() << "\n";
-    
-    // 2. Zapisz słownik (format: Kod_ASCII_znaku Kod_Huffmana)
     for (auto const& pair : huffmanCodes) {
         out << (int)pair.first << " " << pair.second << "\n";
     }
-    
-    // 3. Zapisz sam skompresowany tekst
     out << skompresowany << "\n";
     out.close();
 }
 
-// Odczytuje słownik z dysku i zwraca skompresowany ciąg
 std::string ElektroniczneKsiegi::wczytajArchiwumZDysku(const std::string& sciezka) {
     std::ifstream in(sciezka);
     if (!in.is_open()) return "";
-
     int rozmiar_slownika;
-    in >> rozmiar_slownika;
-    
+    if (!(in >> rozmiar_slownika)) return ""; 
     huffmanCodes.clear();
-    
-    // Odtwarzamy słownik z pliku
     for (int i = 0; i < rozmiar_slownika; i++) {
         int kod_ascii;
         std::string kod_huffmana;
         in >> kod_ascii >> kod_huffmana;
         huffmanCodes[(char)kod_ascii] = kod_huffmana;
     }
-    
-    // Wczytujemy skompresowany tekst (zera i jedynki)
     std::string skompresowany;
     in >> skompresowany;
     in.close();
-    
     return skompresowany;
 }
 
-// Dekompresuje tekst uzywajac odczytanego wczesniej slownika
 std::string ElektroniczneKsiegi::dekompresuj(const std::string& skompresowany) {
-    // Odwracamy mapę: zamiast Znak -> Kod, robimy Kod -> Znak
     std::map<std::string, char> odwroconaMapa;
     for (auto const& pair : huffmanCodes) {
         odwroconaMapa[pair.second] = pair.first;
     }
-
     std::string zdekodowany = "";
     std::string bufor = "";
-    
-    // Czytamy bit po bicie. Jak bufor pasuje do jakiegoś kodu w mapie - mamy literę!
     for (char bit : skompresowany) {
         bufor += bit;
         if (odwroconaMapa.count(bufor)) {
             zdekodowany += odwroconaMapa[bufor];
-            bufor = ""; // Czyścimy bufor na kolejną literę
+            bufor = ""; 
         }
     }
     return zdekodowany;

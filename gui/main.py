@@ -1,266 +1,203 @@
 import sys
 import os
 import subprocess
-import shutil
 from PySide6.QtWidgets import (QApplication, QMainWindow, QGraphicsScene, QMessageBox, QGraphicsView,
-                               QDialog, QVBoxLayout, QFormLayout, QLineEdit, QDialogButtonBox, QLabel, QSpinBox,
-                               QFileDialog, QPushButton)
+                               QDialog, QVBoxLayout, QFormLayout, QLineEdit, QDialogButtonBox, QLabel,
+                               QFileDialog)
 from PySide6.QtGui import QPen, QBrush, QColor
 from PySide6.QtCore import Qt
 
 from ui_interfejs import Ui_mainWindow
 
-# =========================================================
-# OKNO DIALOGOWE (MODAL) DO WPROWADZANIA DANYCH KRASNALA
-# =========================================================
 class OknoDodawaniaDomku(QDialog):
     def __init__(self, x, y, auto_id, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Zamelduj nowego Krasnoludka")
-        
-        self.x = int(x)
-        self.y = int(y)
-        self.auto_id = auto_id
+        self.x, self.y, self.auto_id = int(x), int(y), auto_id
 
         layout = QVBoxLayout(self)
         form = QFormLayout()
-
         self.input_min = QLineEdit()
         self.input_min.setPlaceholderText("np. Zloto;Srebro")
 
-        # Okienko wyświetla automatyczne ID i nie pyta o Kopalnię
         form.addRow("ID Krasnoludka:", QLabel(f"<b>{self.auto_id}</b> (Nadane automatycznie)"))
         form.addRow("Minerały:", self.input_min)
         form.addRow("Współrzędne domku:", QLabel(f"X: {self.x}, Y: {self.y}"))
 
         layout.addLayout(form)
-
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
     def pobierz_dane(self):
-        return {
-            "id": str(self.auto_id),
-            "id_kop": "0", # Domyślnie 0. Zostanie zaktualizowane przez C++ MCMF.
-            "mineraly": self.input_min.text(),
-            "x": str(self.x),
-            "y": str(self.y)
-        }
+        return {"id": str(self.auto_id), "id_kop": "0", "mineraly": self.input_min.text(), "x": str(self.x), "y": str(self.y)}
 
-# =========================================================
-# GŁÓWNA KLASA APLIKACJI (INTERFEJS GRAFICZNY)
-# =========================================================
 class GlowneOkno(QMainWindow):
     def __init__(self):
         super().__init__()
-        
         self.ui = Ui_mainWindow()
         self.ui.setupUi(self)
         self.setWindowTitle("System Logistyki Krasnoludków")
+        
+        self.ostatni_atak = None 
 
-        # === SYSTEM WYBORU DOWOLNYCH PLIKÓW ===
         base_dir = os.path.dirname(__file__)
         data_dir = os.path.join(base_dir, "..", "data")
+        project_dir = os.path.join(base_dir, "..")
+        exe_name = "symulacja_krasnoludkow.exe" if sys.platform == "win32" else "symulacja_krasnoludkow"
+        self.exe_path = os.path.join(project_dir, "build", exe_name)
 
-        msg = QMessageBox()
-        msg.setWindowTitle("Wybór danych wejściowych")
-        msg.setText("Czy chcesz wczytać domyślne pliki testowe, czy wybrać własne z dysku?")
-        btn_domyslne = msg.addButton("Użyj domyślnych", QMessageBox.AcceptRole)
-        btn_wlasne = msg.addButton("Wybierz własne z dysku...", QMessageBox.ActionRole)
-        msg.exec()
-
-        kopalnie_path = ""
-        krasnale_path = ""
-
-        if msg.clickedButton() == btn_wlasne:
-            # Otwiera systemowe okno wyboru dowolnego pliku!
-            kopalnie_path, _ = QFileDialog.getOpenFileName(self, "Wybierz plik Kopalni (.csv)", data_dir, "CSV Files (*.csv);;All Files (*)")
-            krasnale_path, _ = QFileDialog.getOpenFileName(self, "Wybierz plik Krasnoludków (.csv)", data_dir, "CSV Files (*.csv);;All Files (*)")
-
-        # Jeśli użytkownik nie wybrał plików lub kliknął "Domyślne", ładujemy pliki testowe
-        if not kopalnie_path or not krasnale_path:
-            kopalnie_path = os.path.join(data_dir, "kopalnie_test.csv")
-            krasnale_path = os.path.join(data_dir, "dane_krasnoludkow_test.csv")
-
-        # Kopiujemy wybrane pliki jako pliki "aktywne" (dzięki temu C++ zawsze wie, co czytać)
+        # BEZ POP-UPU NA START! Od razu włączamy apkę
         try:
-            shutil.copy(kopalnie_path, os.path.join(data_dir, "kopalnie_aktywne.csv"))
-            shutil.copy(krasnale_path, os.path.join(data_dir, "dane_krasnoludkow_aktywne.csv"))
+            path_bin_kop = os.path.join(data_dir, "kopalnie.bin")
+            if not os.path.exists(path_bin_kop) and os.path.exists(self.exe_path):
+                test_kop = os.path.join(data_dir, "kopalnie_test.csv")
+                test_kras = os.path.join(data_dir, "dane_krasnoludkow_test.csv")
+                subprocess.run([self.exe_path, "IMPORT", test_kop, test_kras], cwd=project_dir, check=True)
         except Exception as e:
-            print(f"Błąd kopiowania plików aktywnych: {e}")
-        # ======================================
-        
-        # ======================================
-        
-        style_path = os.path.join(os.path.dirname(__file__), "style.qss")
+            print(f"Błąd inicjalizacji bazy BIN: {e}")
+
+        style_path = os.path.join(base_dir, "style.qss")
         try:
-            with open(style_path, "r", encoding="utf-8") as f:
-                self.setStyleSheet(f.read())
-        except FileNotFoundError:
-            pass
-        
+            with open(style_path, "r", encoding="utf-8") as f: self.setStyleSheet(f.read())
+        except FileNotFoundError: pass
+
         self.scene = QGraphicsScene()
         self.ui.map.setScene(self.scene)
         self.ui.map.setDragMode(QGraphicsView.ScrollHandDrag)
         self.ui.map.wheelEvent = self.obsluga_zooma
         
-        self.ui.btnUruchomMCMF.clicked.connect(self.uruchom_tylko_mcmf)
-        self.ui.btnDodajDomek.clicked.connect(self.aktywuj_tryb_dodawania)
-        self.ui.odswiezMape.clicked.connect(self.wczytaj_i_rysuj)
+        # Bezpieczne bindowanie (Aplikacja nie sypnie błędem jeśli zmienisz nazwę w UI)
+        if hasattr(self.ui, 'btnUruchomMCMF'): self.ui.btnUruchomMCMF.clicked.connect(self.uruchom_tylko_mcmf)
+        if hasattr(self.ui, 'btnDodajDomek'): self.ui.btnDodajDomek.clicked.connect(self.aktywuj_tryb_dodawania)
+        if hasattr(self.ui, 'odswiezMape'): self.ui.odswiezMape.clicked.connect(self.wczytaj_i_rysuj)
+        if hasattr(self.ui, 'btn_atak'): self.ui.btn_atak.clicked.connect(self.obsluga_ataku_salwa)
+        if hasattr(self.ui, 'btn_kompresja'): self.ui.btn_kompresja.clicked.connect(self.obsluga_kompresji_ksiegi)
+        if hasattr(self.ui, 'btn_szukaj'): self.ui.btn_szukaj.clicked.connect(self.obsluga_wyszukiwania_ksiegi)
+        
+        # Przyciski importu i eksportu 
+        if hasattr(self.ui, 'btn_import'): self.ui.btn_import.clicked.connect(self.import_danych)
+        if hasattr(self.ui, 'btn_eksport'): self.ui.btn_eksport.clicked.connect(self.eksport_danych)
+        if hasattr(self.ui, 'actionImport'): self.ui.actionImport.triggered.connect(self.import_danych)
+        if hasattr(self.ui, 'actionEksport'): self.ui.actionEksport.triggered.connect(self.eksport_danych)
 
         self.tryb_dodawania = False
         self.oryginalny_mousePressEvent = self.ui.map.mousePressEvent
         self.ui.map.mousePressEvent = self.klikniecie_w_mape
 
-        # --- Podpinamy zdefiniowane w pliku UI kontrolki ---
-        self.ui.btn_atak.clicked.connect(self.obsluga_ataku_salwa)
-        self.ui.btn_kompresja.clicked.connect(self.obsluga_kompresji_ksiegi)
-        self.ui.btn_szukaj.clicked.connect(self.obsluga_wyszukiwania_ksiegi)
-        # --------------------------------------
-
-        # Czyścimy stary wynik ataku (jeśli został z poprzedniego uruchomienia aplikacji)
-        path_salwa = os.path.join(os.path.dirname(__file__), "..", "data", "wyniki_salwa.txt")
-        if os.path.exists(path_salwa):
-            os.remove(path_salwa)
-
-        # Od razu ładujemy to, co jest obecnie w plikach
         self.wczytaj_i_rysuj()
 
+    def import_danych(self):
+        data_dir = os.path.join(os.path.dirname(__file__), "..", "data")
+        kopalnie_path, _ = QFileDialog.getOpenFileName(self, "Wybierz plik Kopalni (.csv)", data_dir, "CSV Files (*.csv)")
+        krasnale_path, _ = QFileDialog.getOpenFileName(self, "Wybierz plik Krasnoludków (.csv)", data_dir, "CSV Files (*.csv)")
         
+        if kopalnie_path and krasnale_path:
+            try:
+                subprocess.run([self.exe_path, "IMPORT", kopalnie_path, krasnale_path], cwd=os.path.join(os.path.dirname(__file__), ".."), check=True)
+                self.wczytaj_i_rysuj()
+                QMessageBox.information(self, "Import", "Dane CSV zostały pomyślnie zaimportowane do bazy BIN!")
+            except Exception as e:
+                QMessageBox.critical(self, "Błąd", f"Nie udało się zaimportować plików:\n{e}")
+
+    def eksport_danych(self):
+        docelowa, _ = QFileDialog.getSaveFileName(self, "Eksportuj wyniki", "", "CSV Files (*.csv)")
+        if docelowa:
+            try:
+                subprocess.run([self.exe_path, "EKSPORT", docelowa], cwd=os.path.join(os.path.dirname(__file__), ".."), check=True)
+                QMessageBox.information(self, "Eksport", "Baza BIN została wyeksportowana do CSV!")
+            except Exception as e:
+                QMessageBox.critical(self, "Błąd", f"Eksport bazy nieudany:\n{e}")
 
     def obsluga_zooma(self, event):
-        zoom_in_factor = 1.15
-        zoom_out_factor = 1 / zoom_in_factor
-
-        if event.angleDelta().y() > 0:
-            zoom_factor = zoom_in_factor
-        else:
-            zoom_factor = zoom_out_factor
-
-        self.ui.map.scale(zoom_factor, zoom_factor)
+        zoom = 1.15 if event.angleDelta().y() > 0 else (1 / 1.15)
+        self.ui.map.scale(zoom, zoom)
 
     def obsluga_ataku_salwa(self):
-        # --- SPRZĄTANIE ---
-        path_akcja = os.path.join(os.path.dirname(__file__), "..", "data", "akcja_ksiegi.txt")
-        if os.path.exists(path_akcja): os.remove(path_akcja)
-        # ------------------
-
-        lewy, prawy = self.ui.spin_od.value(), self.ui.spin_do.value()
-        
-        sciezka = os.path.join(os.path.dirname(__file__), "..", "data", "atak.txt")
-        with open(sciezka, "w") as f:
-            f.write(f"{lewy} {prawy}\n")
-            
-        self.uruchom_silnik_cpp()
+        # Koniec z atak.txt! Podajemy parametry salwy w locie
+        if hasattr(self.ui, 'spin_od') and hasattr(self.ui, 'spin_do'):
+            self.ostatni_atak = (self.ui.spin_od.value(), self.ui.spin_do.value())
+            self.wczytaj_i_rysuj()
 
     def uruchom_tylko_mcmf(self):
-        # Czyścimy pliki ataku i księgi, by silnik C++ obliczył TYLKO grafy
-        sciezki_do_usuniecia = ["atak.txt", "akcja_ksiegi.txt"]
-        for plik in sciezki_do_usuniecia:
-            pelna_sciezka = os.path.join(os.path.dirname(__file__), "..", "data", plik)
-            if os.path.exists(pelna_sciezka):
-                os.remove(pelna_sciezka)
+        self.ostatni_atak = None # Czyści rysunek salwy
+        path_akcja = os.path.join(os.path.dirname(__file__), "..", "data", "akcja_ksiegi.txt")
+        if os.path.exists(path_akcja): os.remove(path_akcja)
         self.uruchom_silnik_cpp()
 
     def obsluga_kompresji_ksiegi(self):
-        # --- SPRZĄTANIE ---
-        path_atak = os.path.join(os.path.dirname(__file__), "..", "data", "atak.txt")
-        if os.path.exists(path_atak): os.remove(path_atak)
-        # ------------------
-
-        base_dir = os.path.dirname(__file__)
-        path_akcja = os.path.join(base_dir, "..", "data", "akcja_ksiegi.txt")
-        with open(path_akcja, "w", encoding="utf-8") as f:
+        with open(os.path.join(os.path.dirname(__file__), "..", "data", "akcja_ksiegi.txt"), "w", encoding="utf-8") as f:
             f.write("KOMPRESJA")
         self.uruchom_silnik_cpp()
 
     def obsluga_wyszukiwania_ksiegi(self):  
-        fraza = self.ui.input_szukaj.text().strip()
-        if not fraza:
-            QMessageBox.warning(self, "Błąd", "Wpisz słowo, którego szukasz w elektronicznych księgach!")
-            return
-            
-        # --- SPRZĄTANIE ---
-        path_atak = os.path.join(os.path.dirname(__file__), "..", "data", "atak.txt")
-        if os.path.exists(path_atak): os.remove(path_atak)
-        # ------------------
-            
-        base_dir = os.path.dirname(__file__)
-        path_akcja = os.path.join(base_dir, "..", "data", "akcja_ksiegi.txt")
-        path_wzorzec = os.path.join(base_dir, "..", "data", "wzorzec.txt")
-        
-        with open(path_akcja, "w", encoding="utf-8") as f:
-            f.write("SZUKAJ")
-        with open(path_wzorzec, "w", encoding="utf-8") as f:
-            f.write(fraza)
-            
-        self.uruchom_silnik_cpp()
+        if hasattr(self.ui, 'input_szukaj'):
+            fraza = self.ui.input_szukaj.text().strip()
+            if not fraza:
+                QMessageBox.warning(self, "Błąd", "Wpisz słowo, którego szukasz w księgach!")
+                return
+            base_dir = os.path.dirname(__file__)
+            with open(os.path.join(base_dir, "..", "data", "akcja_ksiegi.txt"), "w", encoding="utf-8") as f: f.write("SZUKAJ")
+            with open(os.path.join(base_dir, "..", "data", "wzorzec.txt"), "w", encoding="utf-8") as f: f.write(fraza)
+            self.uruchom_silnik_cpp()
 
     def uruchom_silnik_cpp(self):
-        self.ui.btnUruchomMCMF.setText("Przetwarzam...")
-        self.ui.btnUruchomMCMF.setEnabled(False)
+        if hasattr(self.ui, 'btnUruchomMCMF'):
+            self.ui.btnUruchomMCMF.setText("Przetwarzam baze BIN...")
+            self.ui.btnUruchomMCMF.setEnabled(False)
         QApplication.processEvents()
 
         try:
-            base_dir = os.path.dirname(__file__)
-            project_dir = os.path.join(base_dir, "..")
-            
-            subprocess.run(
-                ["make", "run"], 
-                cwd=project_dir, 
-                check=True, 
-                capture_output=True, 
-                text=True
-            )
-            
+            if not os.path.exists(self.exe_path):
+                QMessageBox.warning(self, "Brak silnika!", "Skompiluj projekt wpisując 'make' w terminalu.")
+                return
+            subprocess.run(["make", "run"], cwd=os.path.join(os.path.dirname(__file__), ".."), check=True, capture_output=True, text=True)
             self.wczytaj_i_rysuj()
-            self.ui.statusbar.showMessage("Obliczenia zakończone sukcesem!", 4000)
-
+            if hasattr(self.ui, 'statusbar'): self.ui.statusbar.showMessage("Obliczenia na bazie BIN zakończone!", 4000)
         except subprocess.CalledProcessError as e:
             QMessageBox.critical(self, "Błąd", f"Algorytm C++ napotkał błąd:\n{e.stderr}")
-        except FileNotFoundError:
-            QMessageBox.critical(self, "Błąd", "Nie znaleziono polecenia 'make'.")
         finally:
-            self.ui.btnUruchomMCMF.setText("Oblicz Trasy Wydobycia (MCMF)")
-            self.ui.btnUruchomMCMF.setEnabled(True)
+            if hasattr(self.ui, 'btnUruchomMCMF'):
+                self.ui.btnUruchomMCMF.setText("Oblicz Trasy Wydobycia (MCMF)")
+                self.ui.btnUruchomMCMF.setEnabled(True)
 
     def aktywuj_tryb_dodawania(self):
         self.tryb_dodawania = True
         self.ui.map.setCursor(Qt.CrossCursor)
-        self.ui.btnDodajDomek.setText("Wybierz miejsce...")
-        self.ui.btnDodajDomek.setEnabled(False)
-        self.ui.statusbar.showMessage("Kliknij lewym przyciskiem myszy na mapie, aby wskazać pozycję domku.", 6000)
+        if hasattr(self.ui, 'btnDodajDomek'):
+            self.ui.btnDodajDomek.setText("Wybierz miejsce...")
+            self.ui.btnDodajDomek.setEnabled(False)
+        if hasattr(self.ui, 'statusbar'):
+            self.ui.statusbar.showMessage("Kliknij na mapie, aby wskazać pozycję domku.", 6000)
 
     def pobierz_nastepne_id(self):
-        """Przeszukuje plik CSV w poszukiwaniu najwyższego nadanego ID i zwraca ID + 1."""
-        base_dir = os.path.dirname(__file__)
-        path = os.path.join(base_dir, "..", "data", "dane_krasnoludkow.csv")
         max_id = 0
         try:
-            with open(path, 'r', encoding='utf-8') as f:
-                next(f) # Pomiń nagłówek
-                for linia in f:
-                    dane = linia.strip().split(',')
-                    if len(dane) > 0 and dane[0].isdigit():
-                        max_id = max(max_id, int(dane[0]))
-        except FileNotFoundError:
-            pass
+            result = subprocess.run([self.exe_path, "GUI_DATA_DUMP"], cwd=os.path.join(os.path.dirname(__file__), ".."), capture_output=True, text=True, check=True)
+            kras_sekcja = False
+            for linia in result.stdout.split("\n"):
+                linia = linia.strip()
+                if linia == "---KRASNOLUDKI---": kras_sekcja = True; continue
+                if linia == "---OTOCZKA---": break
+                if kras_sekcja and linia and not linia.startswith("ID"):
+                    dane = linia.split(',')
+                    if len(dane) > 0 and dane[0].lstrip('-').isdigit(): max_id = max(max_id, int(dane[0]))
+        except Exception: pass
         return max_id + 1
 
     def klikniecie_w_mape(self, event):
         if self.tryb_dodawania and event.button() == Qt.LeftButton:
-            pozycja_sceny = self.ui.map.mapToScene(event.pos())
+            pozycja_sceny = self.ui.map.mapToScene(event.position().toPoint())
             x, y = int(pozycja_sceny.x()), int(pozycja_sceny.y())
 
             self.tryb_dodawania = False
             self.ui.map.unsetCursor()
-            self.ui.btnDodajDomek.setText("Dodaj domek")
-            self.ui.btnDodajDomek.setEnabled(True)
+            if hasattr(self.ui, 'btnDodajDomek'):
+                self.ui.btnDodajDomek.setText("Dodaj domek")
+                self.ui.btnDodajDomek.setEnabled(True)
 
-            auto_id = self.pobierz_nastepne_id()
-            self.otworz_modal_domku(x, y, auto_id)
+            self.otworz_modal_domku(x, y, self.pobierz_nastepne_id())
         else:
             self.oryginalny_mousePressEvent(event)
 
@@ -268,195 +205,135 @@ class GlowneOkno(QMainWindow):
         okno = OknoDodawaniaDomku(x, y, auto_id, self)
         if okno.exec() == QDialog.Accepted:
             dane = okno.pobierz_dane()
-            if dane["mineraly"]:
-                self.zapisz_krasnala_do_csv(dane)
-            else:
-                QMessageBox.warning(self, "Błąd walidacji", "Pole 'Minerały' musi zostać wypełnione!")
+            if dane["mineraly"]: self.zapisz_krasnala_do_csv(dane)
+            else: QMessageBox.warning(self, "Błąd walidacji", "Pole 'Minerały' musi zostać wypełnione!")
 
     def zapisz_krasnala_do_csv(self, dane):
-        base_dir = os.path.dirname(__file__)
-        path = os.path.join(base_dir, "..", "data", "dane_krasnoludkow.csv")
         try:
-            with open(path, 'a', encoding='utf-8') as f:
-                linia = f"{dane['id']},{dane['id_kop']},{dane['mineraly']},{dane['x']},{dane['y']}\n"
-                f.write(linia)
-            
-            self.ui.statusbar.showMessage(f"Zarejestrowano krasnoludka o ID {dane['id']}. Przeliczam trasy...", 4000)
+            subprocess.run([self.exe_path, "ADD_DWARF", str(dane['id']), str(dane['id_kop']), dane['mineraly'], str(dane['x']), str(dane['y'])],
+                cwd=os.path.join(os.path.dirname(__file__), ".."), check=True, capture_output=True, text=True)
+            if hasattr(self.ui, 'statusbar'): self.ui.statusbar.showMessage(f"Zarejestrowano w BIN (ID {dane['id']})", 4000)
             self.uruchom_silnik_cpp()
-
         except Exception as e:
-            QMessageBox.critical(self, "Błąd zapisu", f"Nie udało się dopisać krasnoludka do bazy CSV:\n{e}")
+            QMessageBox.critical(self, "Błąd zapisu", f"Nie udało się dopisać krasnoludka do bazy BIN:\n{e}")
 
     def wczytaj_i_rysuj(self):
-        base_dir = os.path.dirname(__file__)
-        path_kopalnie = os.path.join(base_dir, "..", "data", "kopalnie_aktywne.csv")
-        path_krasnoludki = os.path.join(base_dir, "..", "data", "dane_krasnoludkow_aktywne.csv")
-        path_otoczka = os.path.join(base_dir, "..", "data", "otoczka.txt")
-
         kopalnie = {}     
         krasnoludki = {}  
+        self.punkty_otoczki = []
+        wynik_salwy = None
 
-        # Wczytywanie kopalń
         try:
-            with open(path_kopalnie, 'r', encoding='utf-8') as f:
-                next(f)
-                for linia in f:
-                    dane = linia.strip().split(',')
-                    if len(dane) >= 4:
-                        kopalnie[int(dane[0])] = {
-                            "x": int(dane[1]), "y": int(dane[2]),
-                            "surowiec": dane[3], "miejsca": dane[4]
-                        }
-        except Exception as e:
-            print(f"Błąd ładowania kopalń: {e}")
+            args = [self.exe_path, "GUI_DATA_DUMP"]
+            
+            # Wstrzyknięcie salwy z pamięci (żegnaj atak.txt!)
+            if getattr(self, 'ostatni_atak', None):
+                args.extend(["SALWA", str(self.ostatni_atak[0]), str(self.ostatni_atak[1])])
 
-        # Wczytywanie krasnoludków
-        try:
-            with open(path_krasnoludki, 'r', encoding='utf-8') as f:
-                next(f)
-                for linia in f:
-                    dane = linia.strip().split(',')
-                    if len(dane) >= 5:
-                        id_krasnala = int(dane[0])
-                        id_kop = int(dane[1]) if dane[1].isdigit() else 0
-                        krasnoludki[id_krasnala] = {
-                            "id_kop": id_kop, 
-                            "mineraly": dane[2],
-                            "x": int(dane[3]), 
-                            "y": int(dane[4])
-                        }
-        except Exception as e:
-            print(f"Błąd ładowania krasnoludków: {e}")
+            result = subprocess.run(args, cwd=os.path.join(os.path.dirname(__file__), ".."), capture_output=True, text=True, check=True)
+            
+            kop_sekcja = kras_sekcja = otoczka_sekcja = salwa_sekcja = False
+            for linia in result.stdout.split("\n"):
+                linia = linia.strip()
+                if not linia: continue
+                if linia == "---KOPALNIE---": kop_sekcja = True; kras_sekcja = otoczka_sekcja = salwa_sekcja = False; continue
+                if linia == "---KRASNOLUDKI---": kras_sekcja = True; kop_sekcja = otoczka_sekcja = salwa_sekcja = False; continue
+                if linia == "---OTOCZKA---": otoczka_sekcja = True; kop_sekcja = kras_sekcja = salwa_sekcja = False; continue
+                if linia == "---SALWA---": salwa_sekcja = True; kop_sekcja = kras_sekcja = otoczka_sekcja = False; continue
+                
+                # PARSOWANIE PANCERNE
+                if kop_sekcja and not linia.startswith("ID"):
+                    dane = linia.split(',')
+                    if len(dane) >= 4 and dane[0].lstrip('-').isdigit():
+                        kopalnie[int(dane[0])] = {"x": int(dane[1]), "y": int(dane[2]), "surowiec": dane[3], "miejsca": dane[4]}
+                elif kras_sekcja and not linia.startswith("ID"):
+                    dane = linia.split(',')
+                    if len(dane) >= 5 and dane[0].lstrip('-').isdigit():
+                        id_kop = int(dane[1]) if dane[1].lstrip('-').isdigit() else 0
+                        krasnoludki[int(dane[0])] = {"id_kop": id_kop, "mineraly": dane[2], "x": int(dane[3]), "y": int(dane[4])}
+                elif otoczka_sekcja:
+                    coords = linia.split(',')
+                    if len(coords) == 2 and coords[0].lstrip('-').isdigit():
+                        self.punkty_otoczki.append((int(coords[0]), int(coords[1])))
+                elif salwa_sekcja:
+                    dane = linia.split()
+                    if len(dane) == 3:
+                        wynik_salwy = (int(dane[0]), int(dane[1]), dane[2])
+        except Exception as e: print(f"Błąd parsera mapy z C++: {e}")
 
         self.scene.clear()
 
-        # 1. RYSOWANIE LINII PRZYDZIAŁÓW Bezpośrednio z CSV!
         for k_id, k_data in krasnoludki.items():
             id_kop = k_data["id_kop"]
             if id_kop > 0 and id_kop in kopalnie:
-                kx, ky = k_data["x"], k_data["y"]
-                mx, my = kopalnie[id_kop]["x"], kopalnie[id_kop]["y"]
-                self.scene.addLine(kx, ky, mx, my, QPen(QColor(46, 204, 113), 2))
+                self.scene.addLine(k_data["x"], k_data["y"], kopalnie[id_kop]["x"], kopalnie[id_kop]["y"], QPen(QColor(46, 204, 113), 2))
 
-        # 2. RYSOWANIE TRASY PATROLOWEJ KSIĘCIA
-        try:
-            punkty_otoczki = []
-            with open(path_otoczka, 'r') as f:
-                for linia in f:
-                    dane = linia.strip().split()
-                    if len(dane) == 2:
-                        punkty_otoczki.append((int(dane[0]), int(dane[1])))
+        if len(self.punkty_otoczki) > 0:
+            max_indeks = len(self.punkty_otoczki) - 1
+            if hasattr(self.ui, 'spin_od'): self.ui.spin_od.setRange(0, max_indeks)
+            if hasattr(self.ui, 'spin_do'): self.ui.spin_do.setRange(0, max_indeks)
 
-            if len(punkty_otoczki) > 0:
-                max_indeks = len(punkty_otoczki) - 1
-                self.ui.spin_od.setRange(0, max_indeks)
-                self.ui.spin_do.setRange(0, max_indeks)
+        if len(self.punkty_otoczki) > 1:
+            pen_otoczka = QPen(QColor(155, 89, 182), 3)
+            pen_otoczka.setStyle(Qt.DashLine)
+            for i in range(len(self.punkty_otoczki)):
+                p1 = self.punkty_otoczki[i]
+                p2 = self.punkty_otoczki[(i + 1) % len(self.punkty_otoczki)]
+                self.scene.addLine(p1[0], p1[1], p2[0], p2[1], pen_otoczka)
 
-            if len(punkty_otoczki) > 1:
-                pen_otoczka = QPen(QColor(155, 89, 182), 3)
-                pen_otoczka.setStyle(Qt.DashLine)
-                for i in range(len(punkty_otoczki)):
-                    p1 = punkty_otoczki[i]
-                    p2 = punkty_otoczki[(i + 1) % len(punkty_otoczki)]
-                    self.scene.addLine(p1[0], p1[1], p2[0], p2[1], pen_otoczka)
-        except FileNotFoundError:
-            pass
-
-        # 3. RYSOWANIE KOPALŃ (Czerwone kwadraty)
         for m_id, data in kopalnie.items():
             rect = self.scene.addRect(data["x"] - 10, data["y"] - 10, 20, 20, QPen(Qt.black), QBrush(QColor(231, 76, 60)))
             rect.setToolTip(f"<b>Kopalnia ID:</b> {m_id}<br><b>Surowiec:</b> {data['surowiec']}<br><b>Miejsca:</b> {data['miejsca']}")
 
-        # 4. RYSOWANIE DOMKÓW KRASNOLUDKÓW (Niebieskie okręgi)
         for k_id, data in krasnoludki.items():
             ellipse = self.scene.addEllipse(data["x"] - 5, data["y"] - 5, 10, 10, QPen(Qt.black), QBrush(QColor(52, 152, 219)))
-            mineraly_format = data['mineraly'].replace(";", ", ")
-            
-            # W tooltipie podajemy też aktualny przydział
-            tooltip = f"<b>Krasnoludek ID:</b> {k_id}<br><b>Lubi:</b> {mineraly_format}"
-            if data['id_kop'] > 0:
-                tooltip += f"<br><b>Pracuje w:</b> Kopalnia nr {data['id_kop']}"
-            else:
-                tooltip += "<br><i>Brak przypisania!</i>"
+            tooltip = f"<b>Krasnoludek ID:</b> {k_id}<br><b>Lubi:</b> {data['mineraly'].replace(';', ', ')}"
+            tooltip += f"<br><b>Pracuje w:</b> Kopalnia nr {data['id_kop']}" if data['id_kop'] > 0 else "<br><i>Brak przypisania!</i>"
             ellipse.setToolTip(tooltip)
 
-        # --- PROBLEM 3: WYNIK SALWY ---
-        path_salwa = os.path.join(base_dir, "..", "data", "wyniki_salwa.txt")
-        if os.path.exists(path_salwa):
-            with open(path_salwa, 'r', encoding='utf-8') as f:
-                dane = f.readline().strip().split()
-                if len(dane) == 3:
-                    l_idx, r_idx, dowodca = int(dane[0]), int(dane[1]), dane[2]
-                    
-                    # === RYSOWANIE ATAKU NA MAPIE ===
-                    # Sprawdzamy czy mamy wyliczoną otoczkę z Problemu 2
-                    if 'punkty_otoczki' in locals() and len(punkty_otoczki) > 0:
-                        n = len(punkty_otoczki)
-                        pen_atak = QPen(QColor(255, 0, 0), 6) # Gruba czerwona linia
-                        
-                        # 1. Rysujemy czerwoną linię (obsługującą przejście dookoła)
-                        kroki = r_idx - l_idx if r_idx >= l_idx else (n - l_idx + r_idx)
-                        for step in range(kroki):
-                            idx_obecny = (l_idx + step) % n
-                            idx_nastepny = (idx_obecny + 1) % n
-                            p1 = punkty_otoczki[idx_obecny]
-                            p2 = punkty_otoczki[idx_nastepny]
-                            self.scene.addLine(p1[0], p1[1], p2[0], p2[1], pen_atak)
-                        
-                        # 2. Rysujemy czerwony "celownik" na dowódcy
-                        dow_pt = punkty_otoczki[l_idx % n]
-                        self.scene.addEllipse(dow_pt[0] - 20, dow_pt[1] - 20, 40, 40, QPen(QColor(255,0,0), 3))
-                        
-                        # 3. Podpisujemy dowódcę na mapie
-                        tekst = self.scene.addText(f"DOWÓDCA ID: {dowodca}")
-                        tekst.setDefaultTextColor(QColor(255, 0, 0))
-                        font = tekst.font()
-                        font.setBold(True)
-                        font.setPointSize(12)
-                        tekst.setFont(font)
-                        tekst.setPos(dow_pt[0] + 15, dow_pt[1] - 30)
-                    # ==================================
+        # RYSOWANIE SALWY Z RAM (bez wyniku .txt)
+        if wynik_salwy:
+            l_idx, r_idx, dowodca = wynik_salwy
+            if len(self.punkty_otoczki) > 0:
+                n = len(self.punkty_otoczki)
+                pen_atak = QPen(QColor(255, 0, 0), 6)
+                kroki = r_idx - l_idx if r_idx >= l_idx else (n - l_idx + r_idx)
+                for step in range(kroki):
+                    idx_obecny = (l_idx + step) % n
+                    p1, p2 = self.punkty_otoczki[idx_obecny], self.punkty_otoczki[(idx_obecny + 1) % n]
+                    self.scene.addLine(p1[0], p1[1], p2[0], p2[1], pen_atak)
+                
+                dow_pt = self.punkty_otoczki[l_idx % n]
+                self.scene.addEllipse(dow_pt[0] - 20, dow_pt[1] - 20, 40, 40, QPen(QColor(255,0,0), 3))
+                tekst = self.scene.addText(f"DOWÓDCA ID: {dowodca}")
+                tekst.setDefaultTextColor(QColor(255, 0, 0))
+                font = tekst.font(); font.setBold(True); font.setPointSize(12); tekst.setFont(font)
+                tekst.setPos(dow_pt[0] + 15, dow_pt[1] - 30)
+            
+            QMessageBox.warning(self, "Atak!", f"Atak na odcinek {l_idx}-{r_idx}!\nRozkaz wydaje Dekametrowiec ID: {dowodca}")
+            self.ostatni_atak = None # Po wyrysowaniu kasujemy pamięć o ataku
 
-                    QMessageBox.warning(self, "Atak!", f"Atak na odcinek {l_idx}-{r_idx}!\nRozkaz wydaje Dekametrowiec ID: {dowodca}")
-            os.remove(path_salwa)
-        # --- PROBLEM 4: ODCZYT WYNIKÓW KSIĘGI ---
-        path_wyniki_ksiegi = os.path.join(base_dir, "..", "data", "wyniki_ksiegi.txt")
-        path_akcja = os.path.join(base_dir, "..", "data", "akcja_ksiegi.txt")
-        
+        # ODCZYT KSIĄG
+        path_wyniki_ksiegi = os.path.join(os.path.dirname(__file__), "..", "data", "wyniki_ksiegi.txt")
+        path_akcja = os.path.join(os.path.dirname(__file__), "..", "data", "akcja_ksiegi.txt")
         if os.path.exists(path_wyniki_ksiegi):
             try:
                 with open(path_wyniki_ksiegi, 'r', encoding='utf-8') as f:
                     akcja = f.readline().strip()
-                    
                     if akcja == "KOMPRESJA":
                         stats = f.readline().strip().split()
                         if len(stats) == 3:
-                            oryg, skomp, proc = stats
-                            msg_text = (
-                                f"<h3 style='color:#d4af37;'>📝 === KOMPRESJA ZAKOŃCZONA ===</h3>"
-                                f"<p>Rozmiar oryginalnego tekstu: <b>{oryg} bitów</b><br>"
-                                f"Rozmiar po kompresji (Drzewo Huffmana): <b>{skomp} bitów</b><br>"
-                                f"Zaoszczędzone miejsce w księgach: <b><span style='color:#2ecc71;'>{float(proc):.2f}%</span></b></p>"
-                            )
-                            self.ui.textBrowser_ksiegi.setHtml(msg_text)
-                            QMessageBox.information(self, "Elektroniczne Księgi - Huffman", "Kompresja zakończona sukcesem!")
-                            
+                            msg_text = f"<h3 style='color:#d4af37;'>📝 KOMPRESJA ZAKOŃCZONA</h3><p>Oryginał: <b>{stats[0]} bitów</b><br>Po kompresji: <b>{stats[1]} bitów</b><br>Zaoszczędzono: <b><span style='color:#2ecc71;'>{float(stats[2]):.2f}%</span></b></p>"
+                            if hasattr(self.ui, 'textBrowser_ksiegi'): self.ui.textBrowser_ksiegi.setHtml(msg_text)
                     elif akcja == "SZUKAJ":
                         liczba_znalezien = f.readline().strip()
                         pozycje = f.readline().strip()
-                        msg_text = f"<h3 style='color:#d4af37;'>🔍 === WYSZUKIWANIE (RABIN-KARP) ===</h3>"
-                        msg_text += f"<p>Znaleziono <b>{liczba_znalezien}</b> pasujących fragmentów tekstu.</p>"
-                        if int(liczba_znalezien) > 0:
-                            msg_text += f"<p>Pozycje literowe wzorca w pliku: {pozycje}</p>"
-                        self.ui.textBrowser_ksiegi.setHtml(msg_text)
-                        QMessageBox.information(self, "Elektroniczne Księgi - Rabin-Karp", "Wyszukiwanie zakończone.")
-                
-                # Sprzątamy pliki komunikacyjne po wyświetleniu okienka
+                        msg_text = f"<h3 style='color:#d4af37;'>🔍 WYSZUKIWANIE ZAKOŃCZONE</h3><p>Znaleziono <b>{liczba_znalezien}</b> pasujących fragmentów.</p>"
+                        if int(liczba_znalezien) > 0: msg_text += f"<p>Indeksy: {pozycje}</p>"
+                        if hasattr(self.ui, 'textBrowser_ksiegi'): self.ui.textBrowser_ksiegi.setHtml(msg_text)
                 os.remove(path_wyniki_ksiegi)
-                if os.path.exists(path_akcja):
-                    os.remove(path_akcja)
-            except Exception as e:
-                print(f"Błąd odczytu wyników księgi: {e}")     
+                if os.path.exists(path_akcja): os.remove(path_akcja)
+            except Exception as e: print(f"Błąd odczytu księgi: {e}")     
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
