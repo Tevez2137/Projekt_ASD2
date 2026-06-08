@@ -1,6 +1,6 @@
 # Kompilator i flagi
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra
+CXXFLAGS = -std=c++17 -Wall -Wextra -O2
 
 # Pliki źródłowe
 SRCS = main.cpp src/mapa.cpp src/kopalnia.cpp src/krasnoludek.cpp src/otoczka.cpp src/dekametrowcy.cpp src/ksiegi.cpp

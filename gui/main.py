@@ -314,10 +314,15 @@ class GlowneOkno(QMainWindow):
             tooltip_tekst = f"<b>Kopalnia ID:</b> {m_id}<br><b>Surowiec:</b> {surowiec}<br><b>Miejsca:</b> {data['miejsca']}"
             
             if not pixmap.isNull():
-                pixmap = pixmap.scaled(32, 32, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                pixmap = pixmap.scaled(100, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation)
                 item = self.scene.addPixmap(pixmap)
                 item.setPos(data["x"] - pixmap.width() / 2, data["y"] - pixmap.height() / 2)
                 item.setToolTip(tooltip_tekst)
+                hover_rect = self.scene.addRect(data["x"] - 48, data["y"] - 48, 96, 96, QPen(Qt.NoPen), QBrush(Qt.transparent))
+                hover_rect.setToolTip(tooltip_tekst)
+                hover_rect.setZValue(1)
+                hover_rect.setAcceptHoverEvents(True)
+                hover_rect.setAcceptedMouseButtons(Qt.NoButton)
             else:
                 # Awaryjnie zwykły prostokąt, jeśli plik obrazu zniknie
                 rect = self.scene.addRect(data["x"] - 10, data["y"] - 10, 20, 20, QPen(Qt.black), QBrush(QColor(231, 76, 60)))
@@ -340,10 +345,15 @@ class GlowneOkno(QMainWindow):
             tooltip += f"<br><b>Pracuje w:</b> Kopalnia nr {id_kop}" if id_kop > 0 else "<br><i>Brak przypisania!</i>"
             
             if not pixmap.isNull():
-                pixmap = pixmap.scaled(24, 24, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                pixmap = pixmap.scaled(100, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation)
                 item = self.scene.addPixmap(pixmap)
                 item.setPos(data["x"] - pixmap.width() / 2, data["y"] - pixmap.height() / 2)
                 item.setToolTip(tooltip)
+                hover_rect = self.scene.addRect(data["x"] - 48, data["y"] - 48, 96, 96, QPen(Qt.NoPen), QBrush(Qt.transparent))
+                hover_rect.setToolTip(tooltip)
+                hover_rect.setZValue(1)
+                hover_rect.setAcceptHoverEvents(True)
+                hover_rect.setAcceptedMouseButtons(Qt.NoButton)
             else:
                 # Awaryjne niebieskie kółko
                 ellipse = self.scene.addEllipse(data["x"] - 5, data["y"] - 5, 10, 10, QPen(Qt.black), QBrush(QColor(52, 152, 219)))
