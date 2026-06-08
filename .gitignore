@@ -7,6 +7,9 @@ symulacja_krasnoludkow
 # Katalogi konfiguracyjne środowisk IDE (JetBrains/CLion/PyCharm)
 .idea/
 cmake-build-debug/
+.vscode/
+build/
+gui/__pycache__/
 
 # Pliki systemowe (Mac/Windows)
 .DS_Store

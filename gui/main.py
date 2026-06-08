@@ -3,8 +3,8 @@ import os
 import subprocess
 from PySide6.QtWidgets import (QApplication, QMainWindow, QGraphicsScene, QMessageBox, QGraphicsView,
                                QDialog, QVBoxLayout, QFormLayout, QLineEdit, QDialogButtonBox, QLabel,
-                               QFileDialog)
-from PySide6.QtGui import QPen, QBrush, QColor
+                               QFileDialog, QPushButton)
+from PySide6.QtGui import QPen, QBrush, QColor, QPixmap
 from PySide6.QtCore import Qt
 
 from ui_interfejs import Ui_mainWindow
@@ -48,7 +48,6 @@ class GlowneOkno(QMainWindow):
         exe_name = "symulacja_krasnoludkow.exe" if sys.platform == "win32" else "symulacja_krasnoludkow"
         self.exe_path = os.path.join(project_dir, "build", exe_name)
 
-        # BEZ POP-UPU NA START! Od razu włączamy apkę
         try:
             path_bin_kop = os.path.join(data_dir, "kopalnie.bin")
             if not os.path.exists(path_bin_kop) and os.path.exists(self.exe_path):
@@ -68,7 +67,6 @@ class GlowneOkno(QMainWindow):
         self.ui.map.setDragMode(QGraphicsView.ScrollHandDrag)
         self.ui.map.wheelEvent = self.obsluga_zooma
         
-        # Bezpieczne bindowanie (Aplikacja nie sypnie błędem jeśli zmienisz nazwę w UI)
         if hasattr(self.ui, 'btnUruchomMCMF'): self.ui.btnUruchomMCMF.clicked.connect(self.uruchom_tylko_mcmf)
         if hasattr(self.ui, 'btnDodajDomek'): self.ui.btnDodajDomek.clicked.connect(self.aktywuj_tryb_dodawania)
         if hasattr(self.ui, 'odswiezMape'): self.ui.odswiezMape.clicked.connect(self.wczytaj_i_rysuj)
@@ -76,7 +74,6 @@ class GlowneOkno(QMainWindow):
         if hasattr(self.ui, 'btn_kompresja'): self.ui.btn_kompresja.clicked.connect(self.obsluga_kompresji_ksiegi)
         if hasattr(self.ui, 'btn_szukaj'): self.ui.btn_szukaj.clicked.connect(self.obsluga_wyszukiwania_ksiegi)
         
-        # Przyciski importu i eksportu 
         if hasattr(self.ui, 'btn_import'): self.ui.btn_import.clicked.connect(self.import_danych)
         if hasattr(self.ui, 'btn_eksport'): self.ui.btn_eksport.clicked.connect(self.eksport_danych)
         if hasattr(self.ui, 'actionImport'): self.ui.actionImport.triggered.connect(self.import_danych)
@@ -115,13 +112,12 @@ class GlowneOkno(QMainWindow):
         self.ui.map.scale(zoom, zoom)
 
     def obsluga_ataku_salwa(self):
-        # Koniec z atak.txt! Podajemy parametry salwy w locie
         if hasattr(self.ui, 'spin_od') and hasattr(self.ui, 'spin_do'):
             self.ostatni_atak = (self.ui.spin_od.value(), self.ui.spin_do.value())
             self.wczytaj_i_rysuj()
 
     def uruchom_tylko_mcmf(self):
-        self.ostatni_atak = None # Czyści rysunek salwy
+        self.ostatni_atak = None
         path_akcja = os.path.join(os.path.dirname(__file__), "..", "data", "akcja_ksiegi.txt")
         if os.path.exists(path_akcja): os.remove(path_akcja)
         self.uruchom_silnik_cpp()
@@ -223,14 +219,40 @@ class GlowneOkno(QMainWindow):
         self.punkty_otoczki = []
         wynik_salwy = None
 
+        # Definicje słowników ikon bazujących na katalogu img/
+        img_kop = {
+            "Zloto": "kopalnia_zlota.png",
+            "Diament": "kopalnia_diamentow.png",
+            "Diamenty": "kopalnia_diamentow.png",
+            "Srebro": "kopalnia_srebra.png",
+            "Zelazo": "kopalnia_zelaza.png",
+            "Wegiel": "kopalnia_wegla.png",
+            "Miedz": "kopalnia_miedzi.png",
+            "Rubin": "kopalnia_rubinow.png",
+            "Rubiny": "kopalnia_rubinow.png"
+        }
+        
+        img_kras = {
+            "Zloto": "krasnoludek_zloto.png",
+            "Diament": "krasnoludek_diament.png",
+            "Diamenty": "krasnoludek_diament.png",
+            "Srebro": "krasnoludek_srebro.png",
+            "Zelazo": "krasnoludek_zelazny.png",
+            "Wegiel": "krasnoludek_wegielny.png",
+            "Miedz": "krasnoludek_miedziany.png",
+            "Rubin": "krasnoludek_rubinowy.png",
+            "Rubiny": "krasnoludek_rubinowy.png"
+        }
+
+        base_dir = os.path.dirname(__file__)
+        img_dir = os.path.join(base_dir, "img")
+
         try:
             args = [self.exe_path, "GUI_DATA_DUMP"]
-            
-            # Wstrzyknięcie salwy z pamięci (żegnaj atak.txt!)
             if getattr(self, 'ostatni_atak', None):
                 args.extend(["SALWA", str(self.ostatni_atak[0]), str(self.ostatni_atak[1])])
 
-            result = subprocess.run(args, cwd=os.path.join(os.path.dirname(__file__), ".."), capture_output=True, text=True, check=True)
+            result = subprocess.run(args, cwd=os.path.join(base_dir, ".."), capture_output=True, text=True, check=True)
             
             kop_sekcja = kras_sekcja = otoczka_sekcja = salwa_sekcja = False
             for linia in result.stdout.split("\n"):
@@ -241,7 +263,6 @@ class GlowneOkno(QMainWindow):
                 if linia == "---OTOCZKA---": otoczka_sekcja = True; kop_sekcja = kras_sekcja = salwa_sekcja = False; continue
                 if linia == "---SALWA---": salwa_sekcja = True; kop_sekcja = kras_sekcja = otoczka_sekcja = False; continue
                 
-                # PARSOWANIE PANCERNE
                 if kop_sekcja and not linia.startswith("ID"):
                     dane = linia.split(',')
                     if len(dane) >= 4 and dane[0].lstrip('-').isdigit():
@@ -263,11 +284,13 @@ class GlowneOkno(QMainWindow):
 
         self.scene.clear()
 
+        # 1. Rysowanie linii połączeń (najpierw linie, by były pod spodem)
         for k_id, k_data in krasnoludki.items():
             id_kop = k_data["id_kop"]
             if id_kop > 0 and id_kop in kopalnie:
                 self.scene.addLine(k_data["x"], k_data["y"], kopalnie[id_kop]["x"], kopalnie[id_kop]["y"], QPen(QColor(46, 204, 113), 2))
 
+        # 2. Rysowanie trasy patrolowej otoczki
         if len(self.punkty_otoczki) > 0:
             max_indeks = len(self.punkty_otoczki) - 1
             if hasattr(self.ui, 'spin_od'): self.ui.spin_od.setRange(0, max_indeks)
@@ -281,17 +304,52 @@ class GlowneOkno(QMainWindow):
                 p2 = self.punkty_otoczki[(i + 1) % len(self.punkty_otoczki)]
                 self.scene.addLine(p1[0], p1[1], p2[0], p2[1], pen_otoczka)
 
+        # 3. Rysowanie Kopalń (ikony PNG)
         for m_id, data in kopalnie.items():
-            rect = self.scene.addRect(data["x"] - 10, data["y"] - 10, 20, 20, QPen(Qt.black), QBrush(QColor(231, 76, 60)))
-            rect.setToolTip(f"<b>Kopalnia ID:</b> {m_id}<br><b>Surowiec:</b> {data['surowiec']}<br><b>Miejsca:</b> {data['miejsca']}")
+            surowiec = data['surowiec']
+            nazwa_pliku = img_kop.get(surowiec, "kopalnia_pusta.png")
+            sciezka_img = os.path.join(img_dir, nazwa_pliku)
+            
+            pixmap = QPixmap(sciezka_img)
+            tooltip_tekst = f"<b>Kopalnia ID:</b> {m_id}<br><b>Surowiec:</b> {surowiec}<br><b>Miejsca:</b> {data['miejsca']}"
+            
+            if not pixmap.isNull():
+                pixmap = pixmap.scaled(32, 32, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                item = self.scene.addPixmap(pixmap)
+                item.setPos(data["x"] - pixmap.width() / 2, data["y"] - pixmap.height() / 2)
+                item.setToolTip(tooltip_tekst)
+            else:
+                # Awaryjnie zwykły prostokąt, jeśli plik obrazu zniknie
+                rect = self.scene.addRect(data["x"] - 10, data["y"] - 10, 20, 20, QPen(Qt.black), QBrush(QColor(231, 76, 60)))
+                rect.setToolTip(tooltip_tekst)
 
+        # 4. Rysowanie Krasnoludków (ikony PNG)
         for k_id, data in krasnoludki.items():
-            ellipse = self.scene.addEllipse(data["x"] - 5, data["y"] - 5, 10, 10, QPen(Qt.black), QBrush(QColor(52, 152, 219)))
-            tooltip = f"<b>Krasnoludek ID:</b> {k_id}<br><b>Lubi:</b> {data['mineraly'].replace(';', ', ')}"
-            tooltip += f"<br><b>Pracuje w:</b> Kopalnia nr {data['id_kop']}" if data['id_kop'] > 0 else "<br><i>Brak przypisania!</i>"
-            ellipse.setToolTip(tooltip)
+            id_kop = data['id_kop']
+            nazwa_pliku = "kransoludek_nieaktywny.png" 
+            
+            if id_kop > 0 and id_kop in kopalnie:
+                surowiec_kopalni = kopalnie[id_kop]['surowiec']
+                nazwa_pliku = img_kras.get(surowiec_kopalni, "kransoludek_nieaktywny.png")
+                
+            sciezka_img = os.path.join(img_dir, nazwa_pliku)
+            pixmap = QPixmap(sciezka_img)
+            
+            mineraly_format = data['mineraly'].replace(";", ", ")
+            tooltip = f"<b>Krasnoludek ID:</b> {k_id}<br><b>Lubi:</b> {mineraly_format}"
+            tooltip += f"<br><b>Pracuje w:</b> Kopalnia nr {id_kop}" if id_kop > 0 else "<br><i>Brak przypisania!</i>"
+            
+            if not pixmap.isNull():
+                pixmap = pixmap.scaled(24, 24, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                item = self.scene.addPixmap(pixmap)
+                item.setPos(data["x"] - pixmap.width() / 2, data["y"] - pixmap.height() / 2)
+                item.setToolTip(tooltip)
+            else:
+                # Awaryjne niebieskie kółko
+                ellipse = self.scene.addEllipse(data["x"] - 5, data["y"] - 5, 10, 10, QPen(Qt.black), QBrush(QColor(52, 152, 219)))
+                ellipse.setToolTip(tooltip)
 
-        # RYSOWANIE SALWY Z RAM (bez wyniku .txt)
+        # 5. RYSOWANIE SALWY
         if wynik_salwy:
             l_idx, r_idx, dowodca = wynik_salwy
             if len(self.punkty_otoczki) > 0:
@@ -311,11 +369,11 @@ class GlowneOkno(QMainWindow):
                 tekst.setPos(dow_pt[0] + 15, dow_pt[1] - 30)
             
             QMessageBox.warning(self, "Atak!", f"Atak na odcinek {l_idx}-{r_idx}!\nRozkaz wydaje Dekametrowiec ID: {dowodca}")
-            self.ostatni_atak = None # Po wyrysowaniu kasujemy pamięć o ataku
+            self.ostatni_atak = None 
 
-        # ODCZYT KSIĄG
-        path_wyniki_ksiegi = os.path.join(os.path.dirname(__file__), "..", "data", "wyniki_ksiegi.txt")
-        path_akcja = os.path.join(os.path.dirname(__file__), "..", "data", "akcja_ksiegi.txt")
+        # 6. ODCZYT KSIĄG
+        path_wyniki_ksiegi = os.path.join(base_dir, "..", "data", "wyniki_ksiegi.txt")
+        path_akcja = os.path.join(base_dir, "..", "data", "akcja_ksiegi.txt")
         if os.path.exists(path_wyniki_ksiegi):
             try:
                 with open(path_wyniki_ksiegi, 'r', encoding='utf-8') as f:
