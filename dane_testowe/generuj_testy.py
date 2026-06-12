@@ -57,19 +57,41 @@ print("- Wygenerowano pliki testowe (Idealny kwadrat)")
 # - Przepływ: Sieć bez problemu obsługuje mniejszą liczbę chętnych (10) 
 #   niż dostępnych miejsc w kopalniach (25). Przepływ = 10.
 
+# with open('./kopalnie_edge.csv', 'w', encoding='utf-8') as f:
+#     f.write("ID,X,Y,Surowiec,IloscMiejsc\n")
+#     f.write("1,100,300,Zelazo,5\n")
+#     f.write("2,200,300,Zelazo,5\n")
+#     f.write("3,300,300,Zelazo,5\n")
+#     f.write("4,400,300,Zelazo,5\n")
+#     f.write("5,500,300,Zelazo,5\n")
+
+# with open('./dane_krasnoludkow_edge.csv', 'w', encoding='utf-8') as f:
+#     f.write("ID,ID_kopalni,Mineraly,X,Y\n")
+#     for i in range(1, 11):
+#         f.write(f"{i},0,Zelazo,{random.randint(100, 500)},{random.randint(280, 320)}\n")
+# print("- Wygenerowano pliki brzegowe (Płaska linia Y=300)")
+
 with open('./kopalnie_edge.csv', 'w', encoding='utf-8') as f:
     f.write("ID,X,Y,Surowiec,IloscMiejsc\n")
-    f.write("1,100,300,Zelazo,5\n")
-    f.write("2,200,300,Zelazo,5\n")
-    f.write("3,300,300,Zelazo,5\n")
-    f.write("4,400,300,Zelazo,5\n")
-    f.write("5,500,300,Zelazo,5\n")
+    # 7 kopalni w równej linii poziomej Y=350, odstępy co 100px
+    x_coords = [100, 200, 300, 400, 500, 600, 700]
+    for i, x in enumerate(x_coords):
+        f.write(f"{i+1},{x},350,Zelazo,5\n")
 
 with open('./dane_krasnoludkow_edge.csv', 'w', encoding='utf-8') as f:
     f.write("ID,ID_kopalni,Mineraly,X,Y\n")
-    for i in range(1, 11):
-        f.write(f"{i},0,Zelazo,{random.randint(100, 500)},{random.randint(280, 320)}\n")
-print("- Wygenerowano pliki brzegowe (Płaska linia Y=300)")
+    # 35 krasnoludków rozrzuconych nad i pod kopalniami, żeby ich nie zasłaniać
+    for i in range(1, 21):
+        x = random.randint(100, 700)
+        # Losujemy, czy krasnoludek respi się u góry, czy na dole
+        if random.choice([True, False]):
+            y = random.randint(150, 250)
+        else:
+            y = random.randint(450, 550)
+        
+        f.write(f"{i},0,Zelazo,{x},{y}\n")
+
+print("- Wygenerowano pliki brzegowe ")
 
 # 3. DANE PRODUKCYJNE (Wielkie dane)
 
@@ -116,6 +138,25 @@ with open('./kopalnie_duplikaty.csv', 'w', encoding='utf-8') as f:
     f.write("2,300,300,Srebro,2\n") # Ten sam punkt X,Y!
     f.write("3,100,100,Wegiel,2\n")
     f.write("4,500,500,Miedz,2\n")
+
+with open('./dane_krasnoludkow_duplikaty.csv', 'w', encoding='utf-8') as f:
+    f.write("ID,ID_kopalni,Mineraly,X,Y\n")
+    
+    # 4 krasnoludki na Złoto i 2 na Srebro (aktywują punkt 300,300)
+    for i in range(1, 5):
+        f.write(f"{i},0,Zloto,350,{200 + i*30}\n")
+    for i in range(5, 7):
+        f.write(f"{i},0,Srebro,250,{200 + (i-4)*30}\n")
+        
+    # 2 krasnoludki na Węgiel (aktywują punkt 100,100)
+    for i in range(7, 9):
+        f.write(f"{i},0,Wegiel,150,{50 + (i-6)*30}\n")
+        
+    # 2 krasnoludki na Miedź (aktywują punkt 500,500)
+    for i in range(9, 11):
+        f.write(f"{i},0,Miedz,550,{450 + (i-8)*30}\n")
+
+print("- Wygenerowano pliki duplikatów (Dodano 10 krasnoludków aktywujących kopalnie)")    
 
 # 5. DANE BRZEGOWE - Brak dopasowania surowców (Dla Przepływu)
 
