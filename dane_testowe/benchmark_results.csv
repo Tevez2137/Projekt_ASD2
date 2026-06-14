@@ -1,0 +1,6 @@
+case,import_ok,import_time_s,dump_ok,dump_time_s,salwa_ok,salwa_time_s
+przyklad_bardzo_maly,True,1.008679,True,0.013850,True,0.014683
+przyklad_duzy,True,268.095838,True,0.021323,True,0.021891
+przyklad_maly,True,1.008406,True,0.014204,True,0.015379
+przyklad_mamut,True,15541.448640,True,0.235619,True,0.035627
+przyklad_sredni,True,20.015339,True,0.017425,True,0.018775

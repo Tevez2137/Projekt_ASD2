@@ -1,5 +1,6 @@
 import subprocess
 import sys
+import time
 from pathlib import Path
 from time import perf_counter
 
@@ -26,7 +27,7 @@ def build_binary(rebuild: bool = False) -> bool:
     return True
 
 
-def run_command(args, timeout=1800):
+def run_command(args, timeout=36000):
     start = perf_counter()
     try:
         proc = subprocess.run(args, cwd=REPO_ROOT, capture_output=True, text=True, timeout=timeout)
@@ -36,6 +37,30 @@ def run_command(args, timeout=1800):
         end = perf_counter()
         stderr_text = exc.stderr if exc.stderr is not None else ""
         return -1, exc.stdout if exc.stdout is not None else "", stderr_text + f"\nCommand timed out after {timeout} seconds.", end - start
+
+
+def run_import_with_progress(args, timeout=36000, interval=600):
+    start = perf_counter()
+    proc = subprocess.Popen(args, cwd=REPO_ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    next_report = interval
+    while proc.poll() is None:
+        elapsed = perf_counter() - start
+        if elapsed >= next_report:
+            minutes = int(elapsed // 60)
+            seconds = int(elapsed % 60)
+            print(f"      IMPORT still running: {minutes}m{seconds:02d}s elapsed...")
+            next_report += interval
+        time.sleep(1)
+        if elapsed >= timeout:
+            proc.kill()
+            try:
+                stdout, stderr = proc.communicate(timeout=5)
+            except subprocess.TimeoutExpired:
+                stdout, stderr = "", ""
+            return -1, stdout, stderr + f"\nCommand timed out after {timeout} seconds.", elapsed
+    stdout, stderr = proc.communicate()
+    end = perf_counter()
+    return proc.returncode, stdout, stderr, end - start
 
 
 def find_test_cases():
@@ -104,20 +129,22 @@ def benchmark_case(name, kopalnie, krasnoludki, runs=1):
     # IMPORT
     import_times = []
     for i in range(runs):
-        code, out, err, elapsed = run_command([
+        print(f"    IMPORT run {i+1}/{runs}...", flush=True)
+        code, out, err, elapsed = run_import_with_progress([
             str(TARGET),
             "IMPORT",
             str(kopalnie),
             str(krasnoludki),
-        ])
+        ], timeout=36000, interval=600)
         import_times.append(elapsed)
         if i == 0:
             result["import_stdout"] = out
             result["import_stderr"] = err
         if code != 0:
-            print(f"IMPORT failed (run {i+1}): returncode={code}")
+            print(f"    IMPORT failed (run {i+1}): returncode={code}")
             result["import_ok"] = False
             break
+        print(f"    IMPORT done ({elapsed:.1f}s)")
         result["import_ok"] = True
     if result["import_ok"]:
         result["import_time_s"] = sum(import_times) / len(import_times)
@@ -129,7 +156,7 @@ def benchmark_case(name, kopalnie, krasnoludki, runs=1):
         code, out, err, elapsed = run_command([
             str(TARGET),
             "GUI_DATA_DUMP",
-        ])
+        ], timeout=36000)
         dump_times.append(elapsed)
         if i == 0:
             result["dump_stdout"] = out
