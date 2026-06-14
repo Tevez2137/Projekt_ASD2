@@ -2,7 +2,7 @@
 #define OTOCZKA_H
 
 #include <vector>
-#include "kopalnia.h" // Musimy dołączyć, żeby znać strukturę "Wspolrzedne"
+#include "kopalnia.h" // do struktury wspolrzedne
 
 // Funkcje pomocnicze do geometrii
 long long skret(Wspolrzedne a, Wspolrzedne b, Wspolrzedne c);
