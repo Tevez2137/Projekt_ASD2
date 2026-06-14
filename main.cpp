@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <unordered_set>
 #include <fstream>
 #include <sstream>
 #include <algorithm>
@@ -43,39 +44,53 @@ int main(int argc, char* argv[]) {
         cout << "---KRASNOLUDKI---\n" << csvKras << "\n";
 
         // otoczka patrolowa wysylana do GUI celem poprawnego narysowania fioletowego muru
-        vector<int> aktywneID;
-        stringstream ssKras(csvKras);
-        string linia; 
-        while(getline(ssKras, linia)) {
-            if(linia.empty() || linia.find("ID") != string::npos) continue; 
-            stringstream ss(linia); string id_str, id_kop_str;
-            getline(ss, id_str, ','); getline(ss, id_kop_str, ',');
-            try {
-                int id_k = stoi(id_kop_str);
-                // wyciagamy krasnale ktore dostaly robote
-                if (id_k > 0) aktywneID.push_back(id_k);
-            } catch(...) {}
-        }
+            // Parsujemy krasnoludkow: zbieramy ID, ID_kopalni oraz współrzędne domu
+            struct SmallDwarf { int id; int id_kopalni; int x; int y; };
+            vector<int> aktywneID;
+            vector<SmallDwarf> krasnoludki;
+            unordered_set<int> seenDwarfIDs;
+            stringstream ssKras(csvKras);
+            string linia;
+            while(getline(ssKras, linia)) {
+                if(linia.empty() || linia.find("ID") != string::npos) continue;
+                stringstream ss(linia);
+                string id_str, id_kop_str, mineraly_str, x_str, y_str;
+                getline(ss, id_str, ','); getline(ss, id_kop_str, ','); getline(ss, mineraly_str, ',');
+                getline(ss, x_str, ','); getline(ss, y_str, ',');
+                try {
+                    int id_k = stoi(id_kop_str);
+                    int id = stoi(id_str);
+                    int x = stoi(x_str);
+                    int y = stoi(y_str);
+                    // Keep only first occurrence of a given dwarf ID (ignore duplicates)
+                    if (seenDwarfIDs.insert(id).second) {
+                        krasnoludki.push_back({id, id_k, x, y});
+                        if (id_k > 0) aktywneID.push_back(id_k);
+                    }
+                } catch(...) {}
+            }
 
-        vector<Wspolrzedne> punktyDoOtoczki;
-        stringstream ssKop(csvKop); 
+        // Zbieramy punkty kopalni razem z ich oryginalnym ID (tylko te, które mają przydzielonych pracowników)
+        vector<pair<Wspolrzedne,int>> punktyDoOtoczkiWithID;
+        stringstream ssKop(csvKop);
         while(getline(ssKop, linia)) {
             if(linia.empty() || linia.find("ID") != string::npos) continue;
             stringstream ss(linia); string id_str, x_str, y_str;
             getline(ss, id_str, ','); getline(ss, x_str, ','); getline(ss, y_str, ',');
             try {
                 int id_k = stoi(id_str);
-                // dorzucamy kopalnie majace pracownikow na stos dla Grahama
                 if(find(aktywneID.begin(), aktywneID.end(), id_k) != aktywneID.end()) {
-                    punktyDoOtoczki.push_back({stoi(x_str), stoi(y_str)});
+                    punktyDoOtoczkiWithID.push_back({{stoi(x_str), stoi(y_str)}, id_k});
                 }
             } catch(...) {}
         }
 
         cout << "---OTOCZKA---\n";
         vector<Wspolrzedne> otoczka;
-        if(punktyDoOtoczki.size() >= 2) {
-            otoczka = zbudujOtoczke(punktyDoOtoczki);
+        if(punktyDoOtoczkiWithID.size() >= 2) {
+            vector<Wspolrzedne> coords; coords.reserve(punktyDoOtoczkiWithID.size());
+            for (auto &pp : punktyDoOtoczkiWithID) coords.push_back(pp.first);
+            otoczka = zbudujOtoczke(coords);
             for(auto& p : otoczka) cout << p.x << "," << p.y << "\n";
         }
 
@@ -87,10 +102,48 @@ int main(int argc, char* argv[]) {
 
                 if (otoczka.size() >= 2) {
                     vector<Dekametrowiec> oddzial;
+                    vector<int> chosenPerIdx;
                     int idx = 0;
                     for (const auto& p : otoczka) {
-                        int glosnosc = ((p.x * 3 + p.y * 7) % 71) + 30; 
-                        oddzial.push_back({1000 + idx, glosnosc});
+                        // Znajdź oryginalne ID kopalni odpowiadające punktowi otoczki
+                        int origKopalniaID = -1;
+                        for (const auto &pp : punktyDoOtoczkiWithID) {
+                            if (pp.first.x == p.x && pp.first.y == p.y) { origKopalniaID = pp.second; break; }
+                        }
+                        int useID = 1000 + idx;
+                        int glosnosc = ((p.x * 3 + p.y * 7) % 71) + 30; // domyślna głośność oparta na współrzędnych kopalni
+                        // Zbierz kandydatów przypisanych do tej kopalni
+                        std::vector<int> kandydaci;
+                        int bestID = -1;
+                        int bestG = -1000000000;
+                        if (origKopalniaID != -1) {
+                            for (const auto &kd : krasnoludki) {
+                                if (kd.id_kopalni > 0 && kd.id_kopalni == origKopalniaID) {
+                                    kandydaci.push_back(kd.id);
+                                    int g = ((kd.x * 3 + kd.y * 7) % 71) + 30;
+                                    if (g > bestG || (g == bestG && (bestID == -1 || kd.id < bestID))) {
+                                        bestG = g;
+                                        bestID = kd.id;
+                                    }
+                                }
+                            }
+                            if (bestID != -1) {
+                                useID = bestID;
+                                glosnosc = bestG;
+                            }
+                        }
+                        chosenPerIdx.push_back(bestID);
+                        // Debug: pokaż mapping dla tego punktu
+                        cout << "MAP_POINT idx=" << idx << " origKopalniaID=" << origKopalniaID << " candidates=";
+                        if (kandydaci.empty()) cout << "none";
+                        else {
+                            for (size_t ii = 0; ii < kandydaci.size(); ++ii) {
+                                if (ii) cout << ",";
+                                cout << kandydaci[ii];
+                            }
+                        }
+                        cout << " -> useID=" << useID << " g=" << glosnosc << "\n";
+                        oddzial.push_back({useID, glosnosc});
                         idx++;
                     }
 
@@ -100,6 +153,14 @@ int main(int argc, char* argv[]) {
 
                     DrzewoPrzedzialowe drzewo(oddzial);
                     int dowodcaID = -1;
+
+                    // Debug: wypisz mapowanie punkt->(origKopalniaID,useID,glosnosc)
+                    cout << "---SALWA_MAP---\n";
+                    for (int i = 0; i < (int)oddzial.size(); ++i) {
+                        cout << i << " ";
+                        // Niestety nie mamy bezposrednio origKopalniaID tutaj; spróbujemy wydrukowac ID i glosnosc
+                        cout << "useID=" << oddzial[i].ID << " g=" << oddzial[i].glosnosc << "\n";
+                    }
 
                     if (lewy_indeks <= prawy_indeks) {
                         dowodcaID = drzewo.zapytajONajglosniejszego(lewy_indeks, prawy_indeks);
@@ -115,6 +176,24 @@ int main(int argc, char* argv[]) {
                     }
                     cout << "---SALWA---\n";
                     cout << lewy_indeks << " " << prawy_indeks << " " << dowodcaID << "\n";
+
+                    int highlightID = -1, hx = -1, hy = -1;
+                    int realCandidate = -1;
+                    if (dowodcaID >= 1000) {
+                        int idx_do = dowodcaID - 1000;
+                        if (idx_do >= 0 && idx_do < (int)chosenPerIdx.size()) realCandidate = chosenPerIdx[idx_do];
+                    } else {
+                        realCandidate = dowodcaID;
+                    }
+                    if (realCandidate != -1) {
+                        for (const auto &kd : krasnoludki) {
+                            if (kd.id == realCandidate) { highlightID = kd.id; hx = kd.x; hy = kd.y; break; }
+                        }
+                    }
+                    if (highlightID != -1) {
+                        cout << "---HIGHLIGHT---\n";
+                        cout << highlightID << "," << hx << "," << hy << ",pink\n";
+                    }
                 }
             } catch(...) {}
         }

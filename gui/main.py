@@ -218,6 +218,7 @@ class GlowneOkno(QMainWindow):
         krasnoludki = {}  
         self.punkty_otoczki = []
         wynik_salwy = None
+        highlight = None
 
         # Definicje słowników ikon bazujących na katalogu img/
         img_kop = {
@@ -255,13 +256,15 @@ class GlowneOkno(QMainWindow):
             result = subprocess.run(args, cwd=os.path.join(base_dir, ".."), capture_output=True, text=True, check=True)
             
             kop_sekcja = kras_sekcja = otoczka_sekcja = salwa_sekcja = False
+            highlight_sekcja = False
             for linia in result.stdout.split("\n"):
                 linia = linia.strip()
                 if not linia: continue
-                if linia == "---KOPALNIE---": kop_sekcja = True; kras_sekcja = otoczka_sekcja = salwa_sekcja = False; continue
-                if linia == "---KRASNOLUDKI---": kras_sekcja = True; kop_sekcja = otoczka_sekcja = salwa_sekcja = False; continue
-                if linia == "---OTOCZKA---": otoczka_sekcja = True; kop_sekcja = kras_sekcja = salwa_sekcja = False; continue
-                if linia == "---SALWA---": salwa_sekcja = True; kop_sekcja = kras_sekcja = otoczka_sekcja = False; continue
+                if linia == "---KOPALNIE---": kop_sekcja = True; kras_sekcja = otoczka_sekcja = salwa_sekcja = highlight_sekcja = False; continue
+                if linia == "---KRASNOLUDKI---": kras_sekcja = True; kop_sekcja = otoczka_sekcja = salwa_sekcja = highlight_sekcja = False; continue
+                if linia == "---OTOCZKA---": otoczka_sekcja = True; kop_sekcja = kras_sekcja = salwa_sekcja = highlight_sekcja = False; continue
+                if linia == "---SALWA---": salwa_sekcja = True; kop_sekcja = kras_sekcja = otoczka_sekcja = highlight_sekcja = False; continue
+                if linia == "---HIGHLIGHT---": highlight_sekcja = True; kop_sekcja = kras_sekcja = otoczka_sekcja = salwa_sekcja = False; continue
                 
                 if kop_sekcja and not linia.startswith("ID"):
                     dane = linia.split(',')
@@ -280,6 +283,15 @@ class GlowneOkno(QMainWindow):
                     dane = linia.split()
                     if len(dane) == 3:
                         wynik_salwy = (int(dane[0]), int(dane[1]), dane[2])
+                elif highlight_sekcja:
+                    # format: ID,X,Y,color
+                    parts = linia.split(',')
+                    if len(parts) >= 4 and parts[0].lstrip('-').isdigit():
+                        try:
+                            hid = int(parts[0]); hx = int(parts[1]); hy = int(parts[2]); hcol = parts[3]
+                            highlight = (hid, hx, hy, hcol)
+                        except:
+                            pass
         except Exception as e: print(f"Błąd parsera mapy z C++: {e}")
 
         self.scene.clear()
@@ -380,6 +392,22 @@ class GlowneOkno(QMainWindow):
             
             QMessageBox.warning(self, "Atak!", f"Atak na odcinek {l_idx}-{r_idx}!\nRozkaz wydaje Dekametrowiec ID: {dowodca}")
             self.ostatni_atak = None 
+
+        # 5b. Podświetlenie najgłośniejszego krasnoludka (jeśli jest)
+        if highlight:
+            hid, hx, hy, hcol = highlight
+            try:
+                col = QColor(hcol)
+            except:
+                col = QColor(255, 105, 180)  # fallback pink
+            pen_h = QPen(col, 4)
+            brush_h = QBrush(QColor(col.red(), col.green(), col.blue(), 40))
+            circ = self.scene.addEllipse(hx - 18, hy - 18, 36, 36, pen_h, brush_h)
+            circ.setZValue(100)
+            label = self.scene.addText(f"#{hid}")
+            label.setDefaultTextColor(col)
+            font = label.font(); font.setBold(True); font.setPointSize(10); label.setFont(font)
+            label.setPos(hx + 20, hy - 10)
 
         # 6. ODCZYT KSIĄG
         path_wyniki_ksiegi = os.path.join(base_dir, "..", "data", "wyniki_ksiegi.txt")
