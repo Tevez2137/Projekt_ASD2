@@ -4,7 +4,6 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
-
 #include "src/mapa.h"
 #include "src/kopalnia.h"
 #include "src/krasnoludek.h"
@@ -13,14 +12,15 @@
 #include "src/dekametrowcy.h"
 
 using namespace std;
-
+// Pomocnicza funkcja zczytujaca do stringa zawartosc pliku (glownie uzywana podczas zrzutow testowych)
 string czytajPlik(const string& sciezka) {
     ifstream plik(sciezka);
     if (!plik.is_open()) return "";
     return string((istreambuf_iterator<char>(plik)), istreambuf_iterator<char>());
 }
-
+// punkt wejscia aplikacji sluzacy glownie do komunikacji (via argumenty CLI i Standard Output) z interfejsem graficznym w Pythonie
 int main(int argc, char* argv[]) {
+    // brak argumentow to po prostu glowna egzekucja programu wczytujacego z bazy bin
     if (argc == 1) {
         Graph g(1);
         g.init();
@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
 
     string komenda = argv[1];
 
-    // GŁÓWNY ZAKRES DZIAŁANIA GUI - WSZYSTKO W PAMIĘCI
+    // zrzucenie calej bazy do formatu CSV na standardowe wyjscie, aby interfejs graficzny (Python) mogl narysowac biezaca mape
     if (komenda == "GUI_DATA_DUMP") {
         ElektroniczneKsiegi ekKop;
         string skompKop = ekKop.wczytajArchiwumZDysku("data/kopalnie.bin");
@@ -38,11 +38,11 @@ int main(int argc, char* argv[]) {
         ElektroniczneKsiegi ekKras;
         string skompKras = ekKras.wczytajArchiwumZDysku("data/dane_krasnoludkow.bin");
         string csvKras = ekKras.dekompresuj(skompKras);
-
+        // specjalne naglowki ulatwiajace pythonowi parsowanie zrzutu w locie
         cout << "---KOPALNIE---\n" << csvKop << "\n";
         cout << "---KRASNOLUDKI---\n" << csvKras << "\n";
 
-        // WYŁUSKIWANIE OTOCZKI (Pancerne parsowanie bez znaków specjalnych \r)
+        // otoczka patrolowa wysylana do GUI celem poprawnego narysowania fioletowego muru
         vector<int> aktywneID;
         stringstream ssKras(csvKras);
         string linia; 
@@ -52,6 +52,7 @@ int main(int argc, char* argv[]) {
             getline(ss, id_str, ','); getline(ss, id_kop_str, ',');
             try {
                 int id_k = stoi(id_kop_str);
+                // wyciagamy krasnale ktore dostaly robote
                 if (id_k > 0) aktywneID.push_back(id_k);
             } catch(...) {}
         }
@@ -64,6 +65,7 @@ int main(int argc, char* argv[]) {
             getline(ss, id_str, ','); getline(ss, x_str, ','); getline(ss, y_str, ',');
             try {
                 int id_k = stoi(id_str);
+                // dorzucamy kopalnie majace pracownikow na stos dla Grahama
                 if(find(aktywneID.begin(), aktywneID.end(), id_k) != aktywneID.end()) {
                     punktyDoOtoczki.push_back({stoi(x_str), stoi(y_str)});
                 }
@@ -77,7 +79,7 @@ int main(int argc, char* argv[]) {
             for(auto& p : otoczka) cout << p.x << "," << p.y << "\n";
         }
 
-        // SALWA DEKAMETROWCÓW W LOCIE (Gdy GUI przekaże argumenty)
+        // SALWA DEKAMETROWCÓW W LOCIE (jesli GUI przekaze argumenty zakresu zapytania z widoku Pythonowego)
         if (argc >= 5 && string(argv[2]) == "SALWA") {
             try {
                 int lewy_indeks = stoi(argv[3]);
@@ -118,7 +120,7 @@ int main(int argc, char* argv[]) {
         }
         return 0;
     }
-    // OBSŁUGA BAZY DANYCH
+    // obsluga bazy danych 
     else if (komenda == "ADD_DWARF" && argc >= 7) {
         ElektroniczneKsiegi ek;
         string skomp = ek.wczytajArchiwumZDysku("data/dane_krasnoludkow.bin");

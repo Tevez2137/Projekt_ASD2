@@ -1,8 +1,0 @@
-case,import_ok,import_time_s,dump_ok,dump_time_s,salwa_ok,salwa_time_s
-przyklad1,True,0.017221,True,0.014055,True,0.013295
-przyklad2,True,0.016986,True,0.011469,True,0.012354
-przyklad3,True,0.015904,True,0.012794,True,0.012129
-przyklad4,True,0.015119,True,0.012354,True,0.012425
-przyklad5,True,0.033544,True,0.012403,True,0.013366
-przyklad6,True,0.015489,True,0.012655,True,0.012730
-przyklad7,True,54.355301,True,0.019591,True,0.018687

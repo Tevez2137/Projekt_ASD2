@@ -16,13 +16,13 @@
 using namespace std;
 const int INF = 1e9;
 
+// glowna funkcja inicjalizujaca, rozpakowuje dane bin/csv, buduje graf i przetwarza logike biznesowa
 void Graph::init() {
     ElektroniczneKsiegi ek;
-
+    // dekompresja i wczytywanie kopalni
     string skompKop = ek.wczytajArchiwumZDysku("data/kopalnie.bin");
     string csvKop = ek.dekompresuj(skompKop);
     if (csvKop.empty()) return;
-
     stringstream ssKop(csvKop);
     string linia; getline(ssKop, linia);
     while (getline(ssKop, linia)) {
@@ -35,11 +35,10 @@ void Graph::init() {
         getline(ss, t, ','); m = stoi(t);
         this->kopalnie.push_back(Kopalnia(id, w, sur, m));
     }
-
+    // dekompresja i wczytywanie krasnoludkow
     string skompKras = ek.wczytajArchiwumZDysku("data/dane_krasnoludkow.bin");
     string csvKras = ek.dekompresuj(skompKras);
     if (csvKras.empty()) return;
-
     stringstream ssKras(csvKras);
     getline(ssKras, linia);
     while (getline(ssKras, linia)) {
@@ -54,14 +53,13 @@ void Graph::init() {
         getline(ss, t, ','); d.y = stoi(t);
         this->krasnoludki.push_back(Krasnoludek(id, idKop, min, d));
     }
-
+    // ustalamy zrodlo, ujscie oraz wierzcholki dla przeplywow w grafie dwudzielnym
     int N = this->krasnoludki.size();
     int M = this->kopalnie.size();
     this->vertices = N + M + 2; 
     this->adj.resize(this->vertices);
     this->zrodlo = 0;
     this->ujscie = N + M + 1;
-
     cout << "Budowanie sieci polaczen z bazy binarnej..." << endl;
     this->buildGraph();
     this->minCostMaxFlow(this->zrodlo, this->ujscie);
@@ -69,11 +67,11 @@ void Graph::init() {
     this->obliczKsiegi();
     this->saveResults(""); 
 }
-
+// zapisuje przypisania krasnoludkow z powrotem do zaszyfrowanej bazy binarnej, uzywajac Huffmana
 void Graph::saveResults(const std::string& /*filename*/) {
     int N = this->krasnoludki.size();
     for (int i = 0; i < N; ++i) this->krasnoludki[i].ID_kopalni = "0"; 
-
+    // aktualizujemy komu udalo sie znalezc miejsce na podstawie dodatnich przeplywow w sieci
     for (int u = 1; u <= N; u++) {
         for (const auto& e : adj[u]) {
             if (e.flow > 0 && e.to != this->zrodlo) {
@@ -82,7 +80,7 @@ void Graph::saveResults(const std::string& /*filename*/) {
             }
         }
     }
-
+    // skladamy CSV w ramie z powrotem do pamieci, a nastepnie kompresujemy i zapisujemy do binarnego archiwum
     std::stringstream ssOut;
     ssOut << "ID,ID_kopalni,Mineraly,X,Y\n";
     for (int i = 0; i < N; ++i) {
@@ -102,21 +100,23 @@ void Graph::saveResults(const std::string& /*filename*/) {
 }
 
 Graph::Graph(int v) : vertices(v) { adj.resize(vertices); }
-
+// dodaje krawedz wraz z krawedzia powrotna (wazne w sieciach residualnych)
 void Graph::addEdge(int u, int v, int cap, int cost) {
     adj[u].push_back({v, cap, 0, cost, (int)adj[v].size()});
     adj[v].push_back({u, 0, 0, -cost, (int)adj[u].size() - 1});
 }
-
+// buduje siec przeplywowa - zrodlo -> krasnoludki -> kompatybilne kopalnie -> ujscie
 void Graph::buildGraph() {
     int N = this->krasnoludki.size();
     int M = this->kopalnie.size();
     for (int i = 0; i < N; ++i) addEdge(this->zrodlo, i + 1, 1, 0);
-
+    // krok 1: wejscie ze zrodla do krasnali (pojemnosc 1 - kazdy krasnal moze pracowac raz, koszt 0)
     for (int i = 0; i < N; ++i) {
+        // krok 2: sprawdzenie preferencji krasnali i polaczenie ich z tymi kopalniami, ktore im odpowiadaja
         for (int j = 0; j < M; ++j) {
             std::string surowiec = this->kopalnie[j].surowiec;
             auto it = std::find(this->krasnoludki[i].mineraly.begin(), this->krasnoludki[i].mineraly.end(), surowiec);
+            // jesli krasnal potrafi to kopac, wyliczamy odleglosc - to bedzie koszt krawedzi
             if (it != this->krasnoludki[i].mineraly.end()) {
                 double dx = this->krasnoludki[i].domek.x - this->kopalnie[j].wspolrzedne.x;
                 double dy = this->krasnoludki[i].domek.y - this->kopalnie[j].wspolrzedne.y;
@@ -125,9 +125,10 @@ void Graph::buildGraph() {
             }
         }
     }
+    // krok 3: polaczenie kopalni z ujsciem z uwzglednieniem ilosci wolnych etatow
     for (int j = 0; j < M; ++j) addEdge(N + j + 1, this->ujscie, this->kopalnie[j].iloscMiejsc, 0);
 }
-
+// przeszukuje siec za pomoca BFS szukajac mozliwosci pchania przeplywu pomiedzy zrodlem a ujsciem (algorytm Edmondsa-Karpa)
 int Graph::findMaxFlow(int s, int t) {
     int flow = 0;
     vector<int> parent(vertices);
@@ -146,14 +147,15 @@ int Graph::findMaxFlow(int s, int t) {
                 }
             }
         }
+        // jesli BFS nie doszedl do ujscia to znaczy ze graf jest "pelny" i blokujemy wpychanie
         if (parent[t] == -1) break;
-
+        // szukamy waskiego gardla na znalezionej drodze (tu bedzie zazwyczaj pchanie po 1 wartosci ze wzgledu na zrodlo)
         int push = INF;
         for (int v = t; v != s; v = parent[v]) {
             int u = parent[v]; int idx = edge_from[v];
             push = min(push, adj[u][idx].capacity - adj[u][idx].flow);
         }
-
+        // zatwierdzamy przeplyw poprzez dodanie go do krawedzi wlasciwej i odjecie na powrotnej (residualnej)
         for (int v = t; v != s; v = parent[v]) {
             int u = parent[v]; int idx = edge_from[v]; int rev_idx = adj[u][idx].rev_idx;
             adj[u][idx].flow += push; adj[v][rev_idx].flow -= push;
@@ -163,22 +165,32 @@ int Graph::findMaxFlow(int s, int t) {
     return flow;
 }
 
+
+
+//algorytm min cost max flow 
+//rozwiazuje on problem przydzialu krasnoludkow do kopalni w taki sposob, aby maksymalizowac liczbe przydzielonych krasnoludkow,
+// a jednoczesnie minimalizowac laczny koszt (dystans) przydzialu.
+//Algorytm ten dziala w dwoch fazach: najpierw znajduje 
+//maksymalny przeplyw w sieci, a nastepnie szuka cykli ujemnych kosztow, aby zoptymalizowac koszt przydzialu.
+
 void Graph::minCostMaxFlow(int start, int end) {
+    // 1 faza: znalezienie max przydzialu nie baczac na dystans
     int totalFlow = findMaxFlow(start, end);
     cout << "-> Faza 1: Znaleziono maksymalny przeplyw: " << totalFlow << " krasnoludkow." << endl;
     vector<int> dist(vertices), parent(vertices), edge_to_parent(vertices);
-
+    // 2 faza: cycle canceling (redukcja kosztu na podstawie modyfikacji ujemnych cykli)
     while (true) {
         fill(dist.begin(), dist.end(), 0);
         fill(parent.begin(), parent.end(), -1);
         fill(edge_to_parent.begin(), edge_to_parent.end(), -1);
         int node_in_cycle = -1;
-
+        // uzycie wariacji relaksacji krawedzi z algorytmu Bellmana-Forda by wykryc cykle
         for (int i = 0; i < vertices; i++) {
             node_in_cycle = -1;
             for (int u = 0; u < vertices; u++) {
                 for (size_t j = 0; j < adj[u].size(); j++) {
                     Edge &e = adj[u][j];
+                    // mozemy cofnac przeplyw jesli zyskamy na tym mniejszy dystans globalny
                     if (e.capacity > e.flow && dist[e.to] > dist[u] + e.cost) {
                         dist[e.to] = dist[u] + e.cost; parent[e.to] = u;
                         edge_to_parent[e.to] = j; node_in_cycle = e.to;
@@ -186,11 +198,14 @@ void Graph::minCostMaxFlow(int start, int end) {
                 }
             }
         }
+        // jesli nigdzie nie da sie "skrocic drogi", wychodzimy
         if (node_in_cycle == -1) break;
+        // odnajdujemy rzeczywisty wezel nalezacy do cyklu (cofniecie V razy do pewnosci)
         for (int i = 0; i < vertices; i++) node_in_cycle = parent[node_in_cycle];
 
         vector<pair<int, int>> cycle;
         int curr = node_in_cycle;
+        // rekonstruujemy caly ujemny cykl
         do {
             int prev = parent[curr];
             cycle.push_back({prev, edge_to_parent[curr]}); curr = prev;
@@ -198,6 +213,7 @@ void Graph::minCostMaxFlow(int start, int end) {
 
         int push = INF;
         for (auto &p : cycle) push = min(push, adj[p.first][p.second].capacity - adj[p.first][p.second].flow);
+        // pchamy i redukujemy koszty po obwodzie cyklu ujemnego
         for (auto &p : cycle) {
             int u = p.first; int idx = p.second;
             int v = adj[u][idx].to; int rev_idx = adj[u][idx].rev_idx;
@@ -205,11 +221,11 @@ void Graph::minCostMaxFlow(int start, int end) {
         }
     }
 }
-
+// pobiera te kopalnie, ktore posiadaja aktualnie przypisanych pracownikow, a nastepnie wywoluje na nich algorytm wyznaczenia otoczki Grahama
 void Graph::obliczTraseKsiecia() {
     vector<Wspolrzedne> punkty;
     int N = krasnoludki.size();
-
+    // sprawdzamy ktore kopalnie maja w sieci residualnej "flow" (przeplyw wiekszy od 0 do ujscia) - to znaczy ze ktos w nich pracuje
     for (size_t j = 0; j < kopalnie.size(); j++) {
         int u = N + j + 1;
         bool uzywana = false;
@@ -218,7 +234,7 @@ void Graph::obliczTraseKsiecia() {
         }
         if (uzywana) punkty.push_back(kopalnie[j].wspolrzedne);
     }
-
+    // z samej jednaj kopalni nie zbudujemy ksiazecych murow
     if (punkty.size() < 2) return;
 
     // ZAPIS W PAMIĘCI RAM
@@ -228,12 +244,12 @@ void Graph::obliczTraseKsiecia() {
     double dystans = obliczObwod(otoczka);
     cout << "PROBLEM 2: Trasa patrolowa Ksiecia: " << round(dystans) << " km\n";
 }
-
+// glowny silnik do wspolpracy z plikami txt ksieg: obsluguje kompresje lub szukanie r-k w zaleznosci od polecen GUI
 void Graph::obliczKsiegi() {
     std::ifstream plikAkcji("data/akcja_ksiegi.txt");
     std::string akcja = "";
     if (plikAkcji.is_open()) { plikAkcji >> akcja; plikAkcji.close(); }
-    if (akcja.empty()) return;
+    if (akcja.empty()) return;  // jesli python nic nie chce, nie marnujemy czasu
 
     std::ifstream plikKsiegi("data/ksiega.txt");
     std::string tekst((std::istreambuf_iterator<char>(plikKsiegi)), std::istreambuf_iterator<char>());
@@ -246,6 +262,7 @@ void Graph::obliczKsiegi() {
         ek.budujDrzewoHuffmana(tekst);
         std::string skompresowany = ek.kompresuj(tekst);
         int oryg = tekst.length() * 8;
+        // prosta statystyka oszczednosci na dysku po kompresji (w procentach)
         double oszczednosc = oryg > 0 ? (1.0 - (double)skompresowany.length() / oryg) * 100.0 : 0.0;
         if (plikWynikow.is_open()) plikWynikow << "KOMPRESJA\n" << oryg << " " << skompresowany.length() << " " << oszczednosc << "\n";
     } 
@@ -253,6 +270,7 @@ void Graph::obliczKsiegi() {
         std::string wzorzec = "";
         std::ifstream plikWzorca("data/wzorzec.txt");
         if (plikWzorca.is_open()) { std::getline(plikWzorca, wzorzec); plikWzorca.close(); }
+        // odpalamy szukanie i ladujemy pozycje (indeksy) wystapien wzorca
         std::vector<int> poz = ek.szukajRabinKarp(tekst, wzorzec);
         if (plikWynikow.is_open()) {
             plikWynikow << "SZUKAJ\n" << poz.size() << "\n";
