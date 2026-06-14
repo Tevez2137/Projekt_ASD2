@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
 
     string komenda = argv[1];
 
-    // GŁÓWNY ZAKRES DZIAŁANIA GUI - WSZYSTKO W PAMIĘCI
+    // Przygotowanie gui do dzialania 
     if (komenda == "GUI_DATA_DUMP") {
         ElektroniczneKsiegi ekKop;
         string skompKop = ekKop.wczytajArchiwumZDysku("data/kopalnie.bin");
@@ -42,7 +42,7 @@ int main(int argc, char* argv[]) {
         cout << "---KOPALNIE---\n" << csvKop << "\n";
         cout << "---KRASNOLUDKI---\n" << csvKras << "\n";
 
-        // WYŁUSKIWANIE OTOCZKI (Pancerne parsowanie bez znaków specjalnych \r)
+        // otoczka w gui 
         vector<int> aktywneID;
         stringstream ssKras(csvKras);
         string linia; 
@@ -118,7 +118,7 @@ int main(int argc, char* argv[]) {
         }
         return 0;
     }
-    // OBSŁUGA BAZY DANYCH
+    // obsluga bazy danych 
     else if (komenda == "ADD_DWARF" && argc >= 7) {
         ElektroniczneKsiegi ek;
         string skomp = ek.wczytajArchiwumZDysku("data/dane_krasnoludkow.bin");

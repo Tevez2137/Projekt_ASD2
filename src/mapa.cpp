@@ -163,6 +163,14 @@ int Graph::findMaxFlow(int s, int t) {
     return flow;
 }
 
+
+
+//algorytm min cost max flow 
+//rozwiazuje on problem przydzialu krasnoludkow do kopalni w taki sposob, aby maksymalizowac liczbe przydzielonych krasnoludkow,
+// a jednoczesnie minimalizowac laczny koszt (dystans) przydzialu.
+//Algorytm ten dziala w dwoch fazach: najpierw znajduje 
+//maksymalny przeplyw w sieci, a nastepnie szuka cykli ujemnych kosztow, aby zoptymalizowac koszt przydzialu.
+
 void Graph::minCostMaxFlow(int start, int end) {
     int totalFlow = findMaxFlow(start, end);
     cout << "-> Faza 1: Znaleziono maksymalny przeplyw: " << totalFlow << " krasnoludkow." << endl;
