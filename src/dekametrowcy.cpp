@@ -28,9 +28,9 @@ void DrzewoPrzedzialowe::BUILD(int v, int l, int r) {
         if (L.maxGlosnosc > R.maxGlosnosc) tree[v] = L;
         else if (L.maxGlosnosc < R.maxGlosnosc) tree[v] = R;
         else {
-            if (L.krasnoludekID == -1) tree[v] = R;
-            else if (R.krasnoludekID == -1) tree[v] = L;
-            else tree[v] = (L.krasnoludekID <= R.krasnoludekID) ? L : R;
+            if (L.straznikID == -1) tree[v] = R;
+            else if (R.straznikID == -1) tree[v] = L;
+            else tree[v] = (L.straznikID <= R.straznikID) ? L : R;
         }
     }
 }
@@ -54,14 +54,14 @@ WezelDrzewa DrzewoPrzedzialowe::QUERY(int v, int l, int r, int ql, int qr) {
     // Zwróć f(x, y) - funkcja zwraca maksimum; przy remisie deterministycznie mniejsze ID
     if (x.maxGlosnosc > y.maxGlosnosc) return x;
     if (x.maxGlosnosc < y.maxGlosnosc) return y;
-    if (x.krasnoludekID == -1) return y;
-    if (y.krasnoludekID == -1) return x;
-    return (x.krasnoludekID <= y.krasnoludekID) ? x : y;
+    if (x.straznikID == -1) return y;
+    if (y.straznikID == -1) return x;
+    return (x.straznikID <= y.straznikID) ? x : y;
 }
 
 int DrzewoPrzedzialowe::zapytajONajglosniejszego(int ql, int qr) {
     if (n == 0 || ql > qr) return -1;
     // Wywołanie: QUERY(root, 1, n, ql, qr, f)
     WezelDrzewa wynik = QUERY(1, 0, n - 1, ql, qr);
-    return wynik.krasnoludekID;
+    return wynik.straznikID;
 }

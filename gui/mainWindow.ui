@@ -130,6 +130,26 @@
          <widget class="QSpinBox" name="spin_do"/>
         </item>
         <item>
+         <widget class="QLabel" name="label_spacing">
+          <property name="text">
+           <string>Rozstaw co ile pikseli:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QSpinBox" name="spin_spacing">
+          <property name="minimum">
+           <number>10</number>
+          </property>
+          <property name="maximum">
+           <number>500</number>
+          </property>
+          <property name="value">
+           <number>100</number>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QPushButton" name="btn_atak">
           <property name="text">
            <string>Wezwij Dekametrowców!</string>

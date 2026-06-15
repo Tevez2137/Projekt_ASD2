@@ -4,7 +4,7 @@
 #include <vector>
 #include <algorithm>
 
-// Pojedynczy krasnoludek na granicy
+// Pojedynczy strażnik / dekametrowiec na trasie patrolowej
 struct Dekametrowiec {
     int ID;
     int glosnosc;
@@ -13,7 +13,7 @@ struct Dekametrowiec {
 // Struktura węzła
 struct WezelDrzewa {
     int maxGlosnosc;
-    int krasnoludekID;
+    int straznikID;
 };
 
 class DrzewoPrzedzialowe {
