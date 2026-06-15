@@ -85,6 +85,22 @@ class GlowneOkno(QMainWindow):
         self.ui.map.mousePressEvent = self.klikniecie_w_mape
 
         self.wczytaj_i_rysuj()
+        # --- CENTROWANIE ZE ZŁOTYM ŚRODKIEM ---
+        obszar = self.scene.itemsBoundingRect()
+        if obszar.isValid():
+            self.ui.map.setSceneRect(obszar)
+                    
+                    # 1. Najpierw resetujemy widok (żeby nie nakładać zooma na zooma)
+            self.ui.map.resetTransform()
+                    
+                    # 2. Centrujemy kamerę idealnie na środku akcji
+            self.ui.map.centerOn(obszar.center())
+                    
+                    # 3. Ustawiamy własny, idealny zoom! 
+                    # Wartość 1.0 to oryginał (za blisko). Wartość 0.5 to oddalenie o połowę.
+                    # Zmień np. na 0.4, 0.6 lub 0.7, aby znaleźć to, co u Ciebie wygląda najlepiej.
+            self.ui.map.scale(0.09, 0.09)
+                # ------------------------------------
 
     def import_danych(self):
         data_dir = os.path.join(os.path.dirname(__file__), "..", "data")
@@ -95,6 +111,22 @@ class GlowneOkno(QMainWindow):
             try:
                 subprocess.run([self.exe_path, "IMPORT", kopalnie_path, krasnale_path], cwd=os.path.join(os.path.dirname(__file__), ".."), check=True)
                 self.wczytaj_i_rysuj()
+                # --- CENTROWANIE ZE ZŁOTYM ŚRODKIEM ---
+                obszar = self.scene.itemsBoundingRect()
+                if obszar.isValid():
+                    self.ui.map.setSceneRect(obszar)
+                    
+                    # 1. Najpierw resetujemy widok (żeby nie nakładać zooma na zooma)
+                    self.ui.map.resetTransform()
+                    
+                    # 2. Centrujemy kamerę idealnie na środku akcji
+                    self.ui.map.centerOn(obszar.center())
+                    
+                    # 3. Ustawiamy własny, idealny zoom! 
+                    # Wartość 1.0 to oryginał (za blisko). Wartość 0.5 to oddalenie o połowę.
+                    # Zmień np. na 0.4, 0.6 lub 0.7, aby znaleźć to, co u Ciebie wygląda najlepiej.
+                    self.ui.map.scale(0.09, 0.09)
+                # ------------------------------------
                 QMessageBox.information(self, "Import", "Dane CSV zostały pomyślnie zaimportowane do bazy BIN!")
             except Exception as e:
                 QMessageBox.critical(self, "Błąd", f"Nie udało się zaimportować plików:\n{e}")
