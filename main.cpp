@@ -19,6 +19,7 @@ string czytajPlik(const string& sciezka) {
     if (!plik.is_open()) return "";
     return string((istreambuf_iterator<char>(plik)), istreambuf_iterator<char>());
 }
+
 // punkt wejscia aplikacji sluzacy glownie do komunikacji (via argumenty CLI i Standard Output) z interfejsem graficznym w Pythonie
 int main(int argc, char* argv[]) {
     // brak argumentow to po prostu glowna egzekucja programu wczytujacego z bazy bin
@@ -44,33 +45,30 @@ int main(int argc, char* argv[]) {
         cout << "---KRASNOLUDKI---\n" << csvKras << "\n";
 
         // otoczka patrolowa wysylana do GUI celem poprawnego narysowania fioletowego muru
-            // Parsujemy krasnoludkow: zbieramy ID, ID_kopalni oraz współrzędne domu
-            struct SmallDwarf { int id; int id_kopalni; int x; int y; };
-            vector<int> aktywneID;
-            vector<SmallDwarf> krasnoludki;
-            unordered_set<int> seenDwarfIDs;
-            stringstream ssKras(csvKras);
-            string linia;
-            while(getline(ssKras, linia)) {
-                if(linia.empty() || linia.find("ID") != string::npos) continue;
-                stringstream ss(linia);
-                string id_str, id_kop_str, mineraly_str, x_str, y_str;
-                getline(ss, id_str, ','); getline(ss, id_kop_str, ','); getline(ss, mineraly_str, ',');
-                getline(ss, x_str, ','); getline(ss, y_str, ',');
-                try {
-                    int id_k = stoi(id_kop_str);
-                    int id = stoi(id_str);
-                    int x = stoi(x_str);
-                    int y = stoi(y_str);
-                    // Keep only first occurrence of a given dwarf ID (ignore duplicates)
-                    if (seenDwarfIDs.insert(id).second) {
-                        krasnoludki.push_back({id, id_k, x, y});
-                        if (id_k > 0) aktywneID.push_back(id_k);
-                    }
-                } catch(...) {}
-            }
+        struct SmallDwarf { int id; int id_kopalni; int x; int y; };
+        vector<int> aktywneID;
+        vector<SmallDwarf> krasnoludki;
+        unordered_set<int> seenDwarfIDs;
+        stringstream ssKras(csvKras);
+        string linia;
+        while(getline(ssKras, linia)) {
+            if(linia.empty() || linia.find("ID") != string::npos) continue;
+            stringstream ss(linia);
+            string id_str, id_kop_str, mineraly_str, x_str, y_str;
+            getline(ss, id_str, ','); getline(ss, id_kop_str, ','); getline(ss, mineraly_str, ',');
+            getline(ss, x_str, ','); getline(ss, y_str, ',');
+            try {
+                int id_k = stoi(id_kop_str);
+                int id = stoi(id_str);
+                int x = stoi(x_str);
+                int y = stoi(y_str);
+                if (seenDwarfIDs.insert(id).second) {
+                    krasnoludki.push_back({id, id_k, x, y});
+                    if (id_k > 0) aktywneID.push_back(id_k);
+                }
+            } catch(...) {}
+        }
 
-        // Zbieramy punkty kopalni razem z ich oryginalnym ID (tylko te, które mają przydzielonych pracowników)
         vector<pair<Wspolrzedne,int>> punktyDoOtoczkiWithID;
         stringstream ssKop(csvKop);
         while(getline(ssKop, linia)) {
@@ -94,7 +92,6 @@ int main(int argc, char* argv[]) {
             for(auto& p : otoczka) cout << p.x << "," << p.y << "\n";
         }
 
-        // SALWA DEKAMETROWCÓW W LOCIE (jesli GUI przekaze argumenty zakresu zapytania z widoku Pythonowego)
         if (argc >= 5 && string(argv[2]) == "SALWA") {
             try {
                 int lewy_indeks = stoi(argv[3]);
@@ -105,14 +102,12 @@ int main(int argc, char* argv[]) {
                     vector<int> chosenPerIdx;
                     int idx = 0;
                     for (const auto& p : otoczka) {
-                        // Znajdź oryginalne ID kopalni odpowiadające punktowi otoczki
                         int origKopalniaID = -1;
                         for (const auto &pp : punktyDoOtoczkiWithID) {
                             if (pp.first.x == p.x && pp.first.y == p.y) { origKopalniaID = pp.second; break; }
                         }
                         int useID = 1000 + idx;
-                        int glosnosc = ((p.x * 3 + p.y * 7) % 71) + 30; // domyślna głośność oparta na współrzędnych kopalni
-                        // Zbierz kandydatów przypisanych do tej kopalni
+                        int glosnosc = ((p.x * 3 + p.y * 7) % 71) + 30; 
                         std::vector<int> kandydaci;
                         int bestID = -1;
                         int bestG = -1000000000;
@@ -122,27 +117,13 @@ int main(int argc, char* argv[]) {
                                     kandydaci.push_back(kd.id);
                                     int g = ((kd.x * 3 + kd.y * 7) % 71) + 30;
                                     if (g > bestG || (g == bestG && (bestID == -1 || kd.id < bestID))) {
-                                        bestG = g;
-                                        bestID = kd.id;
+                                        bestG = g; bestID = kd.id;
                                     }
                                 }
                             }
-                            if (bestID != -1) {
-                                useID = bestID;
-                                glosnosc = bestG;
-                            }
+                            if (bestID != -1) { useID = bestID; glosnosc = bestG; }
                         }
                         chosenPerIdx.push_back(bestID);
-                        // Debug: pokaż mapping dla tego punktu
-                        cout << "MAP_POINT idx=" << idx << " origKopalniaID=" << origKopalniaID << " candidates=";
-                        if (kandydaci.empty()) cout << "none";
-                        else {
-                            for (size_t ii = 0; ii < kandydaci.size(); ++ii) {
-                                if (ii) cout << ",";
-                                cout << kandydaci[ii];
-                            }
-                        }
-                        cout << " -> useID=" << useID << " g=" << glosnosc << "\n";
                         oddzial.push_back({useID, glosnosc});
                         idx++;
                     }
@@ -153,14 +134,6 @@ int main(int argc, char* argv[]) {
 
                     DrzewoPrzedzialowe drzewo(oddzial);
                     int dowodcaID = -1;
-
-                    // Debug: wypisz mapowanie punkt->(origKopalniaID,useID,glosnosc)
-                    cout << "---SALWA_MAP---\n";
-                    for (int i = 0; i < (int)oddzial.size(); ++i) {
-                        cout << i << " ";
-                        // Niestety nie mamy bezposrednio origKopalniaID tutaj; spróbujemy wydrukowac ID i glosnosc
-                        cout << "useID=" << oddzial[i].ID << " g=" << oddzial[i].glosnosc << "\n";
-                    }
 
                     if (lewy_indeks <= prawy_indeks) {
                         dowodcaID = drzewo.zapytajONajglosniejszego(lewy_indeks, prawy_indeks);
@@ -182,9 +155,8 @@ int main(int argc, char* argv[]) {
                     if (dowodcaID >= 1000) {
                         int idx_do = dowodcaID - 1000;
                         if (idx_do >= 0 && idx_do < (int)chosenPerIdx.size()) realCandidate = chosenPerIdx[idx_do];
-                    } else {
-                        realCandidate = dowodcaID;
-                    }
+                    } else { realCandidate = dowodcaID; }
+                    
                     if (realCandidate != -1) {
                         for (const auto &kd : krasnoludki) {
                             if (kd.id == realCandidate) { highlightID = kd.id; hx = kd.x; hy = kd.y; break; }
@@ -197,6 +169,12 @@ int main(int argc, char* argv[]) {
                 }
             } catch(...) {}
         }
+        return 0;
+    }
+    // NOWY KOD: Moduł dedykowany księgom, odpalany błyskawicznie bez MCMF
+    else if (komenda == "KSIEGI") {
+        Graph g(1); 
+        g.obliczKsiegi();
         return 0;
     }
     // obsluga bazy danych 
@@ -220,11 +198,18 @@ int main(int argc, char* argv[]) {
         ek.zapiszArchiwumNaDysk("data/dane_krasnoludkow.bin", ek.kompresuj(kras_csv));
         Graph g(1); g.init();
     }
-    else if (komenda == "EKSPORT" && argc >= 3) {
+    else if (komenda == "EKSPORT" && argc >= 4) {
         ElektroniczneKsiegi ek;
-        string skomp = ek.wczytajArchiwumZDysku("data/dane_krasnoludkow.bin");
-        string csv = ek.dekompresuj(skomp);
-        ofstream out(argv[2]); out << csv; out.close();
+        
+        // Eksport Krasnoludków do pierwszego pliku
+        string skompKras = ek.wczytajArchiwumZDysku("data/dane_krasnoludkow.bin");
+        string csvKras = ek.dekompresuj(skompKras);
+        ofstream outKras(argv[2]); outKras << csvKras; outKras.close();
+
+        // Eksport Kopalni do drugiego pliku
+        string skompKop = ek.wczytajArchiwumZDysku("data/kopalnie.bin");
+        string csvKop = ek.dekompresuj(skompKop);
+        ofstream outKop(argv[3]); outKop << csvKop; outKop.close();
     }
     else {
         Graph g(1); g.init();

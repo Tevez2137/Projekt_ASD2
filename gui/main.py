@@ -1,6 +1,7 @@
 import sys
 import os
 import subprocess
+import math
 from PySide6.QtWidgets import (QApplication, QMainWindow, QGraphicsScene, QMessageBox, QGraphicsView,
                                QDialog, QVBoxLayout, QFormLayout, QLineEdit, QDialogButtonBox, QLabel,
                                QFileDialog, QPushButton)
@@ -99,11 +100,13 @@ class GlowneOkno(QMainWindow):
                 QMessageBox.critical(self, "Błąd", f"Nie udało się zaimportować plików:\n{e}")
 
     def eksport_danych(self):
-        docelowa, _ = QFileDialog.getSaveFileName(self, "Eksportuj wyniki", "", "CSV Files (*.csv)")
-        if docelowa:
+        katalog = QFileDialog.getExistingDirectory(self, "Wybierz folder do zapisu eksportu")
+        if katalog:
+            sciezka_kras = os.path.join(katalog, "wyeksportowane_krasnoludki.csv")
+            sciezka_kop = os.path.join(katalog, "wyeksportowane_kopalnie.csv")
             try:
-                subprocess.run([self.exe_path, "EKSPORT", docelowa], cwd=os.path.join(os.path.dirname(__file__), ".."), check=True)
-                QMessageBox.information(self, "Eksport", "Baza BIN została wyeksportowana do CSV!")
+                subprocess.run([self.exe_path, "EKSPORT", sciezka_kras, sciezka_kop], cwd=os.path.join(os.path.dirname(__file__), ".."), check=True)
+                QMessageBox.information(self, "Eksport", f"Baza BIN została wyeksportowana pomyślnie!\n\nZapisano pliki:\n- wyeksportowane_krasnoludki.csv\n- wyeksportowane_kopalnie.csv\nw folderze:\n{katalog}")
             except Exception as e:
                 QMessageBox.critical(self, "Błąd", f"Eksport bazy nieudany:\n{e}")
 
@@ -125,7 +128,7 @@ class GlowneOkno(QMainWindow):
     def obsluga_kompresji_ksiegi(self):
         with open(os.path.join(os.path.dirname(__file__), "..", "data", "akcja_ksiegi.txt"), "w", encoding="utf-8") as f:
             f.write("KOMPRESJA")
-        self.uruchom_silnik_cpp()
+        self.uruchom_tylko_ksiegi()
 
     def obsluga_wyszukiwania_ksiegi(self):  
         if hasattr(self.ui, 'input_szukaj'):
@@ -136,7 +139,17 @@ class GlowneOkno(QMainWindow):
             base_dir = os.path.dirname(__file__)
             with open(os.path.join(base_dir, "..", "data", "akcja_ksiegi.txt"), "w", encoding="utf-8") as f: f.write("SZUKAJ")
             with open(os.path.join(base_dir, "..", "data", "wzorzec.txt"), "w", encoding="utf-8") as f: f.write(fraza)
-            self.uruchom_silnik_cpp()
+            self.uruchom_tylko_ksiegi()
+
+    def uruchom_tylko_ksiegi(self):
+        try:
+            if not os.path.exists(self.exe_path):
+                QMessageBox.warning(self, "Brak silnika!", "Skompiluj projekt wpisując 'make' w terminalu.")
+                return
+            subprocess.run([self.exe_path, "KSIEGI"], cwd=os.path.join(os.path.dirname(__file__), ".."), check=True, capture_output=True, text=True)
+            self.wczytaj_i_rysuj()
+        except subprocess.CalledProcessError as e:
+            QMessageBox.critical(self, "Błąd", f"Błąd przetwarzania ksiąg:\n{e.stderr}")
 
     def uruchom_silnik_cpp(self):
         if hasattr(self.ui, 'btnUruchomMCMF'):
@@ -148,7 +161,10 @@ class GlowneOkno(QMainWindow):
             if not os.path.exists(self.exe_path):
                 QMessageBox.warning(self, "Brak silnika!", "Skompiluj projekt wpisując 'make' w terminalu.")
                 return
-            subprocess.run(["make", "run"], cwd=os.path.join(os.path.dirname(__file__), ".."), check=True, capture_output=True, text=True)
+            
+            # WYWALONE MAKE RUN - ODPALAMY BEZPOSREDNIO ZBUDOWANA BINKE BEZ ARGUMENTOW (zeby wykonalo Graph::init())
+            subprocess.run([self.exe_path], cwd=os.path.join(os.path.dirname(__file__), ".."), check=True, capture_output=True, text=True)
+            
             self.wczytaj_i_rysuj()
             if hasattr(self.ui, 'statusbar'): self.ui.statusbar.showMessage("Obliczenia na bazie BIN zakończone!", 4000)
         except subprocess.CalledProcessError as e:
@@ -220,29 +236,15 @@ class GlowneOkno(QMainWindow):
         wynik_salwy = None
         highlight = None
 
-        # Definicje słowników ikon bazujących na katalogu img/
         img_kop = {
-            "Zloto": "kopalnia_zlota.png",
-            "Diament": "kopalnia_diamentow.png",
-            "Diamenty": "kopalnia_diamentow.png",
-            "Srebro": "kopalnia_srebra.png",
-            "Zelazo": "kopalnia_zelaza.png",
-            "Wegiel": "kopalnia_wegla.png",
-            "Miedz": "kopalnia_miedzi.png",
-            "Rubin": "kopalnia_rubinow.png",
-            "Rubiny": "kopalnia_rubinow.png"
+            "Zloto": "kopalnia_zlota.png", "Diament": "kopalnia_diamentow.png", "Diamenty": "kopalnia_diamentow.png",
+            "Srebro": "kopalnia_srebra.png", "Zelazo": "kopalnia_zelaza.png", "Wegiel": "kopalnia_wegla.png",
+            "Miedz": "kopalnia_miedzi.png", "Rubin": "kopalnia_rubinow.png", "Rubiny": "kopalnia_rubinow.png"
         }
-        
         img_kras = {
-            "Zloto": "krasnoludek_zloto.png",
-            "Diament": "krasnoludek_diament.png",
-            "Diamenty": "krasnoludek_diament.png",
-            "Srebro": "krasnoludek_srebro.png",
-            "Zelazo": "krasnoludek_zelazny.png",
-            "Wegiel": "krasnoludek_wegielny.png",
-            "Miedz": "krasnoludek_miedziany.png",
-            "Rubin": "krasnoludek_rubinowy.png",
-            "Rubiny": "krasnoludek_rubinowy.png"
+            "Zloto": "krasnoludek_zloto.png", "Diament": "krasnoludek_diament.png", "Diamenty": "krasnoludek_diament.png",
+            "Srebro": "krasnoludek_srebro.png", "Zelazo": "krasnoludek_zelazny.png", "Wegiel": "krasnoludek_wegielny.png",
+            "Miedz": "krasnoludek_miedziany.png", "Rubin": "krasnoludek_rubinowy.png", "Rubiny": "krasnoludek_rubinowy.png"
         }
 
         base_dir = os.path.dirname(__file__)
@@ -281,28 +283,23 @@ class GlowneOkno(QMainWindow):
                         self.punkty_otoczki.append((int(coords[0]), int(coords[1])))
                 elif salwa_sekcja:
                     dane = linia.split()
-                    if len(dane) == 3:
-                        wynik_salwy = (int(dane[0]), int(dane[1]), dane[2])
+                    if len(dane) == 3: wynik_salwy = (int(dane[0]), int(dane[1]), dane[2])
                 elif highlight_sekcja:
-                    # format: ID,X,Y,color
                     parts = linia.split(',')
                     if len(parts) >= 4 and parts[0].lstrip('-').isdigit():
                         try:
                             hid = int(parts[0]); hx = int(parts[1]); hy = int(parts[2]); hcol = parts[3]
                             highlight = (hid, hx, hy, hcol)
-                        except:
-                            pass
+                        except: pass
         except Exception as e: print(f"Błąd parsera mapy z C++: {e}")
 
         self.scene.clear()
 
-        # 1. Rysowanie linii połączeń (najpierw linie, by były pod spodem)
         for k_id, k_data in krasnoludki.items():
             id_kop = k_data["id_kop"]
             if id_kop > 0 and id_kop in kopalnie:
                 self.scene.addLine(k_data["x"], k_data["y"], kopalnie[id_kop]["x"], kopalnie[id_kop]["y"], QPen(QColor(46, 204, 113), 2))
 
-        # 2. Rysowanie trasy patrolowej otoczki
         if len(self.punkty_otoczki) > 0:
             max_indeks = len(self.punkty_otoczki) - 1
             if hasattr(self.ui, 'spin_od'): self.ui.spin_od.setRange(0, max_indeks)
@@ -316,7 +313,6 @@ class GlowneOkno(QMainWindow):
                 p2 = self.punkty_otoczki[(i + 1) % len(self.punkty_otoczki)]
                 self.scene.addLine(p1[0], p1[1], p2[0], p2[1], pen_otoczka)
 
-        # 3. Rysowanie Kopalń (ikony PNG)
         for m_id, data in kopalnie.items():
             surowiec = data['surowiec']
             nazwa_pliku = img_kop.get(surowiec, "kopalnia_pusta.png")
@@ -336,11 +332,9 @@ class GlowneOkno(QMainWindow):
                 hover_rect.setAcceptHoverEvents(True)
                 hover_rect.setAcceptedMouseButtons(Qt.NoButton)
             else:
-                # Awaryjnie zwykły prostokąt, jeśli plik obrazu zniknie
                 rect = self.scene.addRect(data["x"] - 10, data["y"] - 10, 20, 20, QPen(Qt.black), QBrush(QColor(231, 76, 60)))
                 rect.setToolTip(tooltip_tekst)
 
-        # 4. Rysowanie Krasnoludków (ikony PNG)
         for k_id, data in krasnoludki.items():
             id_kop = data['id_kop']
             nazwa_pliku = "kransoludek_nieaktywny.png" 
@@ -367,11 +361,9 @@ class GlowneOkno(QMainWindow):
                 hover_rect.setAcceptHoverEvents(True)
                 hover_rect.setAcceptedMouseButtons(Qt.NoButton)
             else:
-                # Awaryjne niebieskie kółko
                 ellipse = self.scene.addEllipse(data["x"] - 5, data["y"] - 5, 10, 10, QPen(Qt.black), QBrush(QColor(52, 152, 219)))
                 ellipse.setToolTip(tooltip)
 
-        # 5. RYSOWANIE SALWY
         if wynik_salwy:
             l_idx, r_idx, dowodca = wynik_salwy
             if len(self.punkty_otoczki) > 0:
@@ -393,13 +385,10 @@ class GlowneOkno(QMainWindow):
             QMessageBox.warning(self, "Atak!", f"Atak na odcinek {l_idx}-{r_idx}!\nRozkaz wydaje Dekametrowiec ID: {dowodca}")
             self.ostatni_atak = None 
 
-        # 5b. Podświetlenie najgłośniejszego krasnoludka (jeśli jest)
         if highlight:
             hid, hx, hy, hcol = highlight
-            try:
-                col = QColor(hcol)
-            except:
-                col = QColor(255, 105, 180)  # fallback pink
+            try: col = QColor(hcol)
+            except: col = QColor(255, 105, 180)
             pen_h = QPen(col, 4)
             brush_h = QBrush(QColor(col.red(), col.green(), col.blue(), 40))
             circ = self.scene.addEllipse(hx - 18, hy - 18, 36, 36, pen_h, brush_h)
@@ -408,6 +397,47 @@ class GlowneOkno(QMainWindow):
             label.setDefaultTextColor(col)
             font = label.font(); font.setBold(True); font.setPointSize(10); label.setFont(font)
             label.setPos(hx + 20, hy - 10)
+
+        # --- STATYSTYKI OBLICZANE Z DANYCH BIEŻĄCYCH ---
+        aktywne_kopalnie_id = set()
+        pracujacy_krasnale = 0
+        wydobycie_surowcow = {}
+        wymagana_owsianka = 0  
+
+        for k_id, k_data in krasnoludki.items():
+            id_kop = k_data["id_kop"]
+            if id_kop > 0 and id_kop in kopalnie:
+                aktywne_kopalnie_id.add(id_kop)
+                pracujacy_krasnale += 1
+                sur = kopalnie[id_kop]["surowiec"]
+                wydobycie_surowcow[sur] = wydobycie_surowcow.get(sur, 0) + 1
+                dx = k_data["x"] - kopalnie[id_kop]["x"]
+                dy = k_data["y"] - kopalnie[id_kop]["y"]
+                wymagana_owsianka += round(math.hypot(dx, dy))
+
+        dystans_otoczki = 0
+        n_ot = len(self.punkty_otoczki)
+        if n_ot > 1:
+            for i in range(n_ot):
+                p1 = self.punkty_otoczki[i]
+                p2 = self.punkty_otoczki[(i + 1) % n_ot]
+                dystans_otoczki += math.hypot(p1[0] - p2[0], p1[1] - p2[1])
+            if n_ot == 2: dystans_otoczki *= 2 
+
+        html_statystyki = f"""
+        <h3 style='margin-top: 0; margin-bottom: 5px; color: #f1c40f;'>📊 Raport Królestwa</h3>
+        <b>Pracujący krasnale:</b> {pracujacy_krasnale}<br>
+        <b>Aktywne kopalnie:</b> {len(aktywne_kopalnie_id)}<br>
+        <b>Zużycie Owsianki:</b> {wymagana_owsianka} miseczek<br>
+        <b>Trasa Patrolu (Mur):</b> {round(dystans_otoczki)} km<br>
+        <hr style='border: 1px solid #7f8c8d; margin: 5px 0;'>
+        <b>Wydobycie surowców:</b><br>
+        """
+        if wydobycie_surowcow:
+            for sur, ilosc in sorted(wydobycie_surowcow.items()): html_statystyki += f"• {sur}: {ilosc} krasnali<br>"
+        else: html_statystyki += "<i>Brak aktywnego wydobycia</i>"
+
+        if hasattr(self.ui, 'panel_statystyk'): self.ui.panel_statystyk.setText(html_statystyki)
 
         # 6. ODCZYT KSIĄG
         path_wyniki_ksiegi = os.path.join(base_dir, "..", "data", "wyniki_ksiegi.txt")
