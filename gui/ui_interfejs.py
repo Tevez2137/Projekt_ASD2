@@ -70,6 +70,13 @@ class Ui_mainWindow(object):
 
         self.verticalLayout_1.addWidget(self.btnUruchomMCMF)
 
+        self.panel_statystyk = QLabel(self.tab_logistyka)
+        self.panel_statystyk.setObjectName(u"panel_statystyk")
+        self.panel_statystyk.setAlignment(Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
+        self.panel_statystyk.setWordWrap(True)
+
+        self.verticalLayout_1.addWidget(self.panel_statystyk)
+
         self.verticalSpacer_1 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.verticalLayout_1.addItem(self.verticalSpacer_1)
@@ -154,7 +161,7 @@ class Ui_mainWindow(object):
 
         self.retranslateUi(mainWindow)
 
-        self.tabWidget.setCurrentIndex(2)
+        self.tabWidget.setCurrentIndex(0)
 
 
         QMetaObject.connectSlotsByName(mainWindow)
@@ -166,6 +173,7 @@ class Ui_mainWindow(object):
         self.btnDodajDomek.setText(QCoreApplication.translate("mainWindow", u"Wznie\u015b Nowy Domek", None))
         self.odswiezMape.setText(QCoreApplication.translate("mainWindow", u"Zbadaj Teren (Od\u015bwie\u017c)", None))
         self.btnUruchomMCMF.setText(QCoreApplication.translate("mainWindow", u"Oblicz Trasy Wydobycia (MCMF)", None))
+        self.panel_statystyk.setText(QCoreApplication.translate("mainWindow", u"<h3 style='margin-top: 0; margin-bottom: 10px; color: #f1c40f;'>\U0001f4ca Raport Kr\U000000f3lestwa</h3>Brak danych. Wczytaj map\U00000119.", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_logistyka), QCoreApplication.translate("mainWindow", u"\u26cf\ufe0f Logistyka", None))
         self.labelObronaTytul.setText(QCoreApplication.translate("mainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-size:14pt; font-weight:600; color:#d4af37;\">System Wczesnego Ostrzegania</span></p></body></html>", None))
         self.label_od.setText(QCoreApplication.translate("mainWindow", u"Pocz\u0105tek odcinka ataku:", None))

@@ -123,3 +123,12 @@ QScrollBar::handle:vertical {
     background: #d4af37;
     border-radius: 5px;
 }
+#panel_statystyk {
+    background-color: rgba(20, 30, 40, 220); 
+    color: #ecf0f1; 
+    padding: 15px; 
+    border-radius: 8px; 
+    font-size: 13px; 
+    border: 1px solid #34495e; 
+    margin-top: 15px;
+}
