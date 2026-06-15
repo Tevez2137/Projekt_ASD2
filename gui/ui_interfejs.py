@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'mainWindow.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.11.0
+## Created by: Qt User Interface Compiler version 6.11.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -111,6 +111,19 @@ class Ui_mainWindow(object):
 
         self.verticalLayout_2.addWidget(self.spin_do)
 
+        self.label_spacing = QLabel(self.tab_obrona)
+        self.label_spacing.setObjectName(u"label_spacing")
+
+        self.verticalLayout_2.addWidget(self.label_spacing)
+
+        self.spin_spacing = QSpinBox(self.tab_obrona)
+        self.spin_spacing.setObjectName(u"spin_spacing")
+        self.spin_spacing.setMinimum(10)
+        self.spin_spacing.setMaximum(500)
+        self.spin_spacing.setValue(100)
+
+        self.verticalLayout_2.addWidget(self.spin_spacing)
+
         self.btn_atak = QPushButton(self.tab_obrona)
         self.btn_atak.setObjectName(u"btn_atak")
 
@@ -178,6 +191,7 @@ class Ui_mainWindow(object):
         self.labelObronaTytul.setText(QCoreApplication.translate("mainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-size:14pt; font-weight:600; color:#d4af37;\">System Wczesnego Ostrzegania</span></p></body></html>", None))
         self.label_od.setText(QCoreApplication.translate("mainWindow", u"Pocz\u0105tek odcinka ataku:", None))
         self.label_do.setText(QCoreApplication.translate("mainWindow", u"Koniec odcinka ataku:", None))
+        self.label_spacing.setText(QCoreApplication.translate("mainWindow", u"Rozstaw co ile pikseli:", None))
         self.btn_atak.setText(QCoreApplication.translate("mainWindow", u"Wezwij Dekametrowc\u00f3w!", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_obrona), QCoreApplication.translate("mainWindow", u"\U0001f3f9 Obrona Granic", None))
         self.btn_import.setText(QCoreApplication.translate("mainWindow", u"Importuj Dane", None))

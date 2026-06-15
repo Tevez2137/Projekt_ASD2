@@ -112,8 +112,8 @@ class GlowneOkno(QMainWindow):
         self.ui.map.scale(zoom, zoom)
 
     def obsluga_ataku_salwa(self):
-        if hasattr(self.ui, 'spin_od') and hasattr(self.ui, 'spin_do'):
-            self.ostatni_atak = (self.ui.spin_od.value(), self.ui.spin_do.value())
+        if hasattr(self.ui, 'spin_od') and hasattr(self.ui, 'spin_do') and hasattr(self.ui, 'spin_spacing'):
+            self.ostatni_atak = (self.ui.spin_od.value(), self.ui.spin_do.value(), self.ui.spin_spacing.value())
             self.wczytaj_i_rysuj()
 
     def uruchom_tylko_mcmf(self):
@@ -216,6 +216,7 @@ class GlowneOkno(QMainWindow):
     def wczytaj_i_rysuj(self):
         kopalnie = {}     
         krasnoludki = {}  
+        straznicy = {}
         self.punkty_otoczki = []
         wynik_salwy = None
         highlight = None
@@ -251,20 +252,22 @@ class GlowneOkno(QMainWindow):
         try:
             args = [self.exe_path, "GUI_DATA_DUMP"]
             if getattr(self, 'ostatni_atak', None):
-                args.extend(["SALWA", str(self.ostatni_atak[0]), str(self.ostatni_atak[1])])
+                args.extend(["SALWA", str(self.ostatni_atak[0]), str(self.ostatni_atak[1]), str(self.ostatni_atak[2])])
 
             result = subprocess.run(args, cwd=os.path.join(base_dir, ".."), capture_output=True, text=True, check=True)
             
             kop_sekcja = kras_sekcja = otoczka_sekcja = salwa_sekcja = False
+            straznicy_sekcja = False
             highlight_sekcja = False
             for linia in result.stdout.split("\n"):
                 linia = linia.strip()
                 if not linia: continue
-                if linia == "---KOPALNIE---": kop_sekcja = True; kras_sekcja = otoczka_sekcja = salwa_sekcja = highlight_sekcja = False; continue
-                if linia == "---KRASNOLUDKI---": kras_sekcja = True; kop_sekcja = otoczka_sekcja = salwa_sekcja = highlight_sekcja = False; continue
-                if linia == "---OTOCZKA---": otoczka_sekcja = True; kop_sekcja = kras_sekcja = salwa_sekcja = highlight_sekcja = False; continue
-                if linia == "---SALWA---": salwa_sekcja = True; kop_sekcja = kras_sekcja = otoczka_sekcja = highlight_sekcja = False; continue
-                if linia == "---HIGHLIGHT---": highlight_sekcja = True; kop_sekcja = kras_sekcja = otoczka_sekcja = salwa_sekcja = False; continue
+                if linia == "---KOPALNIE---": kop_sekcja = True; kras_sekcja = otoczka_sekcja = salwa_sekcja = highlight_sekcja = straznicy_sekcja = False; continue
+                if linia == "---KRASNOLUDKI---": kras_sekcja = True; kop_sekcja = otoczka_sekcja = salwa_sekcja = highlight_sekcja = straznicy_sekcja = False; continue
+                if linia == "---OTOCZKA---": otoczka_sekcja = True; kop_sekcja = kras_sekcja = salwa_sekcja = highlight_sekcja = straznicy_sekcja = False; continue
+                if linia == "---STRAZNICY---": straznicy_sekcja = True; kop_sekcja = kras_sekcja = otoczka_sekcja = salwa_sekcja = highlight_sekcja = False; continue
+                if linia == "---SALWA---": salwa_sekcja = True; kop_sekcja = kras_sekcja = otoczka_sekcja = highlight_sekcja = straznicy_sekcja = False; continue
+                if linia == "---HIGHLIGHT---": highlight_sekcja = True; kop_sekcja = kras_sekcja = otoczka_sekcja = salwa_sekcja = straznicy_sekcja = False; continue
                 
                 if kop_sekcja and not linia.startswith("ID"):
                     dane = linia.split(',')
@@ -279,6 +282,10 @@ class GlowneOkno(QMainWindow):
                     coords = linia.split(',')
                     if len(coords) == 2 and coords[0].lstrip('-').isdigit():
                         self.punkty_otoczki.append((int(coords[0]), int(coords[1])))
+                elif straznicy_sekcja:
+                    dane = linia.split(',')
+                    if len(dane) == 4 and dane[0].lstrip('-').isdigit():
+                        straznicy[int(dane[0])] = {"x": int(dane[1]), "y": int(dane[2]), "glosnosc": int(dane[3])}
                 elif salwa_sekcja:
                     dane = linia.split()
                     if len(dane) == 3:
@@ -305,8 +312,11 @@ class GlowneOkno(QMainWindow):
         # 2. Rysowanie trasy patrolowej otoczki
         if len(self.punkty_otoczki) > 0:
             max_indeks = len(self.punkty_otoczki) - 1
-            if hasattr(self.ui, 'spin_od'): self.ui.spin_od.setRange(0, max_indeks)
-            if hasattr(self.ui, 'spin_do'): self.ui.spin_do.setRange(0, max_indeks)
+        else:
+            max_indeks = 0
+
+        if hasattr(self.ui, 'spin_od'): self.ui.spin_od.setRange(0, max_indeks)
+        if hasattr(self.ui, 'spin_do'): self.ui.spin_do.setRange(0, max_indeks)
 
         if len(self.punkty_otoczki) > 1:
             pen_otoczka = QPen(QColor(155, 89, 182), 3)
@@ -316,7 +326,44 @@ class GlowneOkno(QMainWindow):
                 p2 = self.punkty_otoczki[(i + 1) % len(self.punkty_otoczki)]
                 self.scene.addLine(p1[0], p1[1], p2[0], p2[1], pen_otoczka)
 
-        # 3. Rysowanie Kopalń (ikony PNG)
+        # 3. Rysowanie Strażników / Dekametrowców na trasie patrolowej
+        for s_id, data in straznicy.items():
+            możliwe_ikony = ["dekametrowiec.png", "dekametrowiecc.png"]
+            pixmap_straznik = QPixmap()
+            for nazwa in możliwe_ikony:
+                sciezka = os.path.join(img_dir, nazwa)
+                if os.path.exists(sciezka):
+                    pix = QPixmap(sciezka)
+                    if not pix.isNull():
+                        pixmap_straznik = pix
+                        break
+
+            tooltip_straznik = f"<b>Dekametrowiec ID:</b> {s_id}<br><b>Głośność:</b> {data['glosnosc']}"
+
+            if not pixmap_straznik.isNull():
+                pixmap_straznik = pixmap_straznik.scaled(50, 50, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                item = self.scene.addPixmap(pixmap_straznik)
+                item.setPos(data['x'] - pixmap_straznik.width() / 2, data['y'] - pixmap_straznik.height() / 2)
+                item.setToolTip(tooltip_straznik)
+                item.setZValue(10)
+                item.setAcceptHoverEvents(True)
+                item.setAcceptedMouseButtons(Qt.NoButton)
+            else:
+                pen_straznik = QPen(QColor(142, 68, 173), 2)
+                brush_straznik = QBrush(QColor(142, 68, 173, 100))
+                ellipse = self.scene.addEllipse(data['x'] - 10, data['y'] - 10, 20, 20, pen_straznik, brush_straznik)
+                ellipse.setToolTip(tooltip_straznik)
+                ellipse.setZValue(10)
+                ellipse.setAcceptHoverEvents(True)
+                ellipse.setAcceptedMouseButtons(Qt.NoButton)
+
+            label = self.scene.addText(f"D{s_id - 1000}")
+            label.setDefaultTextColor(QColor(142, 68, 173))
+            font = label.font(); font.setBold(True); font.setPointSize(8); label.setFont(font)
+            label.setPos(data['x'] + 18, data['y'] - 18)
+            label.setZValue(12)
+
+        # 4. Rysowanie Kopalń (ikony PNG)
         for m_id, data in kopalnie.items():
             surowiec = data['surowiec']
             nazwa_pliku = img_kop.get(surowiec, "kopalnia_pusta.png")
