@@ -46,6 +46,7 @@ int Graph::findMaxFlow(int s, int t)
     vector<int> parent(vertices);
     vector<int> edge_from(vertices);
 
+    // Standardowy Edmonds-Karp oparty na BFS
     while (true)
     {
         fill(parent.begin(), parent.end(), -1);
@@ -69,7 +70,8 @@ int Graph::findMaxFlow(int s, int t)
             }
         }
         if (parent[t] == -1)
-            break;
+            break; // Odcina jak nie ma już żadnej wolnej ścieżki
+
         int push = INF;
         for (int v = t; v != s; v = parent[v])
         {
@@ -101,6 +103,8 @@ void Graph::minCostMaxFlow(int start, int end)
         fill(parent.begin(), parent.end(), -1);
         fill(edge_to_parent.begin(), edge_to_parent.end(), -1);
         int node_in_cycle = -1;
+
+        // Bellman-Ford: szukamy ujemnego cyklu żeby poprawić koszty
         for (int i = 0; i < vertices; i++)
         {
             node_in_cycle = -1;
@@ -136,6 +140,8 @@ void Graph::minCostMaxFlow(int start, int end)
         int push = INF;
         for (auto &p : cycle)
             push = min(push, adj[p.first][p.second].capacity - adj[p.first][p.second].flow);
+        
+        // rotacja w cyklu: krasnale zamieniają się celami żeby obniżyć łączny dystans
         for (auto &p : cycle)
         {
             int u = p.first;

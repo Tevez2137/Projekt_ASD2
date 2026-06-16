@@ -9,8 +9,8 @@ struct Edge {
     int to;
     int capacity;
     int flow;
-    int cost;
-    int rev_idx;
+    int cost; //odległość z domku do kopalni
+    int rev_idx; // indeks krawędzi powrotnej
 };
 
 class Graph {
@@ -25,9 +25,13 @@ public:
     Graph(int v);
     void buildGraph();
     void addEdge(int u, int v, int cap, int cost);
+
+    // Edmonds-Karp - przypisuje max krasnali, ignorując dystanse
     int findMaxFlow(int s, int t);
+
+    // Szuka ujemnych cykli żeby zoptymalizować im drogę do pracy
     void minCostMaxFlow(int start, int end);
-    void przypiszWyniki(); // Tylko przetwarza przepływy na ID kopalni
+    void przypiszWyniki();
 };
 
 #endif
