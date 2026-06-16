@@ -28,7 +28,7 @@ void ElektroniczneKsiegi::budujDrzewoHuffmana(const std::string& tekst) {
     for (auto pair : freq) {
         pq.push(new HuffmanNode(pair.first, pair.second));
     }
-
+    // gdyby tekst składał się z tylko jednego powtarzającego się znaku
     if (pq.size() == 1) {
         HuffmanNode* single = pq.top();
         pq.pop();
@@ -50,6 +50,7 @@ void ElektroniczneKsiegi::budujDrzewoHuffmana(const std::string& tekst) {
     generateCodes(root, "");
 }
 
+// prosta zamiana; lecimy po znakach i zastępujemy je gotowymi kodami bitowymi
 std::string ElektroniczneKsiegi::kompresuj(const std::string& tekst) {
     std::string skompresowany = "";
     for (char ch : tekst) {
@@ -64,11 +65,11 @@ std::vector<int> ElektroniczneKsiegi::szukajRabinKarp(const std::string& tekst, 
     int m = wzorzec.length();
     if (m == 0 || n < m) return pozycje;
 
-    int d = 256; // Wielkość alfabetu ASCII
-    int q = 101; // Liczba pierwsza do modulo w funkcji haszującej
+    int d = 256; // wielkosc alfabetu ASCII
+    int q = 101; // liczba pierwsza uzywana do modulo
     int h = 1;
-    int p = 0; // Wartość hasza wzorca
-    int t = 0; // Wartość hasza bieżącego okna tekstu
+    int p = 0; // wartosc hasza wzorca
+    int t = 0; // wartosc hasza obecnego okna
 
     for (int i = 0; i < m - 1; i++) {
         h = (h * d) % q;
@@ -98,7 +99,8 @@ std::vector<int> ElektroniczneKsiegi::szukajRabinKarp(const std::string& tekst, 
         }
     }
     return pozycje;
-}// Zapisuje wygenerowany słownik i skompresowany tekst do pliku
+}
+// zapisuje wygenerowany słownik i skompresowany tekst do pliku .bin
 void ElektroniczneKsiegi::zapiszArchiwumNaDysk(const std::string& sciezka, const std::string& skompresowany) {
     std::ofstream out(sciezka);
     if (!out.is_open()) return;

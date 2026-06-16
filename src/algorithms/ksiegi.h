@@ -42,7 +42,7 @@ public:
     void zapiszArchiwumNaDysk(const std::string& sciezka, const std::string& skompresowany);
     std::string wczytajArchiwumZDysku(const std::string& sciezka);
     
-    // Moduł Wyszukiwania (Rabin-Karp)
+    // Szuka wzorca za pomocą przesuwnego okna i haszy
     std::vector<int> szukajRabinKarp(const std::string& tekst, const std::string& wzorzec);
 };
 
