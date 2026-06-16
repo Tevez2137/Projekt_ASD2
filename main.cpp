@@ -204,7 +204,16 @@ int main(int argc, char *argv[])
 
                 if (straznicyPunkty.size() >= 1)
                 {
-                    vector<int> wybraneIndeksy;
+                    // Budowanie drzewa przedzałowego z dekametrowcami
+                    vector<Dekametrowiec> dekametrowcy;
+                    for (int idx = 0; idx < (int)straznicyPunkty.size(); ++idx)
+                    {
+                        const auto &p = straznicyPunkty[idx];
+                        int glosnosc = ((p.x * 3 + p.y * 7) % 71) + 30;
+                        dekametrowcy.push_back({idx, glosnosc});
+                    }
+                    DrzewoPrzedzialowe drewoPrzedzialowe(dekametrowcy);
+
                     if (lewy_indeks < 0)
                         lewy_indeks = 0;
                     if (prawy_indeks < 0)
@@ -215,39 +224,74 @@ int main(int argc, char *argv[])
                         prawy_indeks = otoczka.size() - 1;
                     double startDist = vertexDist[lewy_indeks];
                     double endDist = vertexDist[prawy_indeks];
-                    const double eps = 1e-9;
+
+                    int dowodcaID = -1;
+                    int maxGlosnosc = -1;
+
                     if (lewy_indeks <= prawy_indeks)
                     {
-                        for (int i = 0; i < (int)straznicyDist.size(); ++i)
+                        // Pojedynczy zakres: użyj binary search do znalezienia min i max indeksu
+                        int minIdx = lower_bound(straznicyDist.begin(), straznicyDist.end(), startDist) - straznicyDist.begin();
+                        int maxIdx = upper_bound(straznicyDist.begin(), straznicyDist.end(), endDist) - straznicyDist.begin() - 1;
+                        
+                        if (minIdx < (int)straznicyDist.size() && maxIdx >= 0 && minIdx <= maxIdx)
                         {
-                            if (straznicyDist[i] + eps >= startDist && straznicyDist[i] <= endDist + eps)
+                            int straznikID = drewoPrzedzialowe.zapytajONajglosniejszego(minIdx, maxIdx);
+                            if (straznikID >= 0 && straznikID < (int)straznicyPunkty.size())
                             {
-                                wybraneIndeksy.push_back(i);
+                                dowodcaID = 1000 + straznikID;
+                                const auto &p = straznicyPunkty[straznikID];
+                                maxGlosnosc = ((p.x * 3 + p.y * 7) % 71) + 30;
                             }
                         }
                     }
                     else
                     {
-                        for (int i = 0; i < (int)straznicyDist.size(); ++i)
+                        // Dwa zakresy: [0, endDist] i [startDist, end]
+                        int maxIdx1 = upper_bound(straznicyDist.begin(), straznicyDist.end(), endDist) - straznicyDist.begin() - 1;
+                        int minIdx2 = lower_bound(straznicyDist.begin(), straznicyDist.end(), startDist) - straznicyDist.begin();
+                        
+                        int straznikID = -1;
+                        
+                        // Pierwsze zapytanie: [0, maxIdx1]
+                        if (maxIdx1 >= 0)
                         {
-                            if (straznicyDist[i] + eps >= startDist || straznicyDist[i] <= endDist + eps)
+                            straznikID = drewoPrzedzialowe.zapytajONajglosniejszego(0, maxIdx1);
+                        }
+                        
+                        // Drugie zapytanie: [minIdx2, n-1]
+                        if (minIdx2 < (int)straznicyDist.size())
+                        {
+                            int straznikID2 = drewoPrzedzialowe.zapytajONajglosniejszego(minIdx2, straznicyDist.size() - 1);
+                            
+                            // Wybrać tego z wyższą głośnością
+                            if (straznikID < 0 || (straznikID2 >= 0 && straznikID2 < (int)straznicyPunkty.size()))
                             {
-                                wybraneIndeksy.push_back(i);
+                                const auto &p2 = straznicyPunkty[straznikID2];
+                                int glosnosc2 = ((p2.x * 3 + p2.y * 7) % 71) + 30;
+                                
+                                if (straznikID >= 0 && straznikID < (int)straznicyPunkty.size())
+                                {
+                                    const auto &p1 = straznicyPunkty[straznikID];
+                                    int glosnosc1 = ((p1.x * 3 + p1.y * 7) % 71) + 30;
+                                    
+                                    if (glosnosc2 > glosnosc1 || (glosnosc2 == glosnosc1 && straznikID2 < straznikID))
+                                    {
+                                        straznikID = straznikID2;
+                                    }
+                                }
+                                else
+                                {
+                                    straznikID = straznikID2;
+                                }
                             }
                         }
-                    }
-
-                    int dowodcaID = -1;
-                    int maxGlosnosc = -1;
-                    for (int idx : wybraneIndeksy)
-                    {
-                        const auto &p = straznicyPunkty[idx];
-                        int id = 1000 + idx;
-                        int glosnosc = ((p.x * 3 + p.y * 7) % 71) + 30;
-                        if (glosnosc > maxGlosnosc || (glosnosc == maxGlosnosc && (dowodcaID == -1 || id < dowodcaID)))
+                        
+                        if (straznikID >= 0 && straznikID < (int)straznicyPunkty.size())
                         {
-                            maxGlosnosc = glosnosc;
-                            dowodcaID = id;
+                            dowodcaID = 1000 + straznikID;
+                            const auto &p = straznicyPunkty[straznikID];
+                            maxGlosnosc = ((p.x * 3 + p.y * 7) % 71) + 30;
                         }
                     }
 
