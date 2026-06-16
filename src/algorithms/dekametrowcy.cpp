@@ -8,23 +8,26 @@ DrzewoPrzedzialowe::DrzewoPrzedzialowe(const std::vector<Dekametrowiec>& dekamet
     A = dekametrowcy;
     n = A.size();
     if(n > 0) {
-        tree.assign(4 * n + 1, ELEMENT_NEUTRALNY);
+        tree.assign(4 * n + 1, ELEMENT_NEUTRALNY);  // 4n żeby drzewo starczyło na najgorszy rozkład
         BUILD(1, 0, n - 1);
     }
 }
 
 void DrzewoPrzedzialowe::BUILD(int v, int l, int r) {
+    // Jak przedział zwinie się do 1 elementu to mamy liścia
     if (l == r) {
         tree[v] = {A[l].glosnosc, A[l].ID};
     } else {
         int mid = (l + r) / 2;
-        BUILD(2 * v, l, mid);          // BUILD(v.left, 1, mid, f)
-        BUILD(2 * v + 1, mid + 1, r);  // BUILD(v.right, mid+1, r, f)
+        // Odpalamy dla lewego dziecka (2*v) i prawego (2*v+1)
+        BUILD(2 * v, l, mid);         
+        BUILD(2 * v + 1, mid + 1, r); 
         
-        // Funkcja f to u nas max(lewy, prawy) - wybieramy większą głośność.
-        // Przy remisie wybieramy mniejsze ID, aby zachować deterministyczne zachowanie.
+        
         WezelDrzewa L = tree[2 * v];
         WezelDrzewa R = tree[2 * v + 1];
+
+        //wybieramy wiekszą glosnosc, a przy remisie mniejsze id
         if (L.maxGlosnosc > R.maxGlosnosc) tree[v] = L;
         else if (L.maxGlosnosc < R.maxGlosnosc) tree[v] = R;
         else {
@@ -36,22 +39,21 @@ void DrzewoPrzedzialowe::BUILD(int v, int l, int r) {
 }
 
 WezelDrzewa DrzewoPrzedzialowe::QUERY(int v, int l, int r, int ql, int qr) {
-    // 1) Jeśli przedział całkowicie poza zapytaniem (r < ql lub qr < l)
+    // jesli jest poza przedzialem to zwracamy element neutralny
     if (r < ql || qr < l) {
         return ELEMENT_NEUTRALNY;
     }
     
-    // 2) Jeśli przedział całkowicie wewnątrz zapytania (ql <= l oraz r <= qr)
+    // zapytanie idealnie pokrywa lub jest większe niż obecny przedział
     if (ql <= l && r <= qr) {
         return tree[v];
     }
     
-    // Część "else" - wykonaj a), b), c), d)
+    // zahacza o nasz przedział, rozbijamy zapytanie na poddrzewa i z nich bierzemy max
     int mid = (l + r) / 2;
     WezelDrzewa x = QUERY(2 * v, l, mid, ql, qr);
     WezelDrzewa y = QUERY(2 * v + 1, mid + 1, r, ql, qr);
 
-    // Zwróć f(x, y) - funkcja zwraca maksimum; przy remisie deterministycznie mniejsze ID
     if (x.maxGlosnosc > y.maxGlosnosc) return x;
     if (x.maxGlosnosc < y.maxGlosnosc) return y;
     if (x.straznikID == -1) return y;
@@ -61,7 +63,6 @@ WezelDrzewa DrzewoPrzedzialowe::QUERY(int v, int l, int r, int ql, int qr) {
 
 int DrzewoPrzedzialowe::zapytajONajglosniejszego(int ql, int qr) {
     if (n == 0 || ql > qr) return -1;
-    // Wywołanie: QUERY(root, 1, n, ql, qr, f)
     WezelDrzewa wynik = QUERY(1, 0, n - 1, ql, qr);
     return wynik.straznikID;
 }
