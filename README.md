@@ -176,22 +176,24 @@ Interfejs zaimplementowany w **PySide6** umożliwia wygodne korzystanie z system
 
 ```text
 Projekt_ASD2/
-├── .gitignore          # Ignorowane pliki binarne (.o, .exe)
-├── Makefile            # Skrypt budujący aplikację C++
-├── main.cpp            # Główny entry point dla aplikacji backendowej
+├── .gitignore                           # Ignorowane pliki binarne (.o, .exe)
+├── Makefile                             # Skrypt budujący aplikację C++
+├── main.cpp                             # Główny entry point dla aplikacji backendowej
 │
-├── src/                # Folder klas algorytmicznych (C++)
-│   ├── Graph.cpp       # Implementacja algorytmów sieciowych i przepływu
-│   ├── Geometry.cpp    # Convex Hull i operacje na wektorach
-│   └── DataStruct.cpp  # Segment Tree, Huffman, Rabin-Karp
+├── src/.                                # Folder klas algorytmicznych (C++)
+|   |── graph/                  
+│   |   ├── Graph.cpp                    # Implementacja algorytmów sieciowych i przepływu
+|   |── algorithm/ 
+│   |  ├── otoczka.cpp                   # Convex Hull i operacje na wektorach
+│   |  └── ksiegi.cpp, dekametrowcy.cpp  # Segment Tree, Huffman, Rabin-Karp
+│     
+├── gui/                                 # Skrypty i interfejs PySide6 (Python)
+│    ├── main.py                         # Entry point dla GUI
+│    └── views/                          # Komponenty okien i map
 │
-├── gui/                # Skrypty i interfejs PySide6 (Python)
-│   ├── main.py         # Entry point dla GUI
-│   └── views/          # Komponenty okien i map
-│
-├── data/               # Podstawowe słowniki wejściowe
-├── dane_testowe/       # Duże zbiory do testów obciążeniowych i asymptotyki
-└── docs/               # Raporty wydajności i obrony projektu
+├── data/                                # Podstawowe dane wejściowe
+├── dane_testowe/                        # Duże zbiory do testów obciążeniowych i asymptotyki
+└── docs/                                # Raporty wydajności i obrony projektu
 ```
 
 ---
